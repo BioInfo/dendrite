@@ -52,11 +52,12 @@ proptest = { workspace = true }
 rstest = { workspace = true }
 tokio = { workspace = true, features = ["test-util", "macros"] }
 
-# Benchmarks - uncomment when implemented
-# [[bench]]
-# name = "fork"
-# harness = false
-#
+# Benchmarks
+[[bench]]
+name = "fork"
+harness = false
+
+# Future benchmarks
 # [[bench]]
 # name = "tree_search"
 # harness = false
