@@ -91,4 +91,231 @@ impl KvCache {
     pub fn total_blocks(&self) -> usize {
         self.config.max_blocks
     }
+
+    /// Get used blocks count.
+    pub fn used_blocks(&self) -> usize {
+        self.config.max_blocks - self.pool.free_count()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_cache(max_blocks: usize) -> KvCache {
+        let config = KvCacheConfig {
+            num_layers: 1,
+            num_kv_heads: 1,
+            head_dim: 64,
+            max_blocks,
+            tokens_per_block: 16,
+        };
+        KvCache::new(config).unwrap()
+    }
+
+    #[test]
+    fn new_cache_has_all_blocks_free() {
+        let cache = create_test_cache(100);
+        assert_eq!(cache.free_blocks(), 100);
+        assert_eq!(cache.used_blocks(), 0);
+        assert_eq!(cache.total_blocks(), 100);
+    }
+
+    #[test]
+    fn allocate_reduces_free_count() {
+        let mut cache = create_test_cache(10);
+
+        let _b1 = cache.allocate_block().unwrap();
+        assert_eq!(cache.free_blocks(), 9);
+        assert_eq!(cache.used_blocks(), 1);
+
+        let _b2 = cache.allocate_block().unwrap();
+        assert_eq!(cache.free_blocks(), 8);
+        assert_eq!(cache.used_blocks(), 2);
+    }
+
+    #[test]
+    fn free_returns_block_to_pool() {
+        let mut cache = create_test_cache(10);
+
+        let b1 = cache.allocate_block().unwrap();
+        assert_eq!(cache.free_blocks(), 9);
+
+        cache.free_block(b1).unwrap();
+        assert_eq!(cache.free_blocks(), 10);
+    }
+
+    #[test]
+    fn share_and_free_refcount_behavior() {
+        let mut cache = create_test_cache(10);
+
+        let b1 = cache.allocate_block().unwrap();
+        assert_eq!(cache.free_blocks(), 9);
+
+        // Share twice (refcount now 3)
+        cache.share_block(b1).unwrap();
+        cache.share_block(b1).unwrap();
+
+        // Free once (refcount 2) - not returned
+        cache.free_block(b1).unwrap();
+        assert_eq!(cache.free_blocks(), 9);
+
+        // Free again (refcount 1) - not returned
+        cache.free_block(b1).unwrap();
+        assert_eq!(cache.free_blocks(), 9);
+
+        // Free last (refcount 0) - returned
+        cache.free_block(b1).unwrap();
+        assert_eq!(cache.free_blocks(), 10);
+    }
+
+    #[test]
+    fn copy_on_write_unshared_returns_same() {
+        let mut cache = create_test_cache(10);
+
+        let b1 = cache.allocate_block().unwrap();
+        let result = cache.copy_on_write(b1).unwrap();
+
+        assert_eq!(result, b1);
+        assert_eq!(cache.free_blocks(), 9);
+    }
+
+    #[test]
+    fn copy_on_write_shared_allocates_new() {
+        let mut cache = create_test_cache(10);
+
+        let b1 = cache.allocate_block().unwrap();
+        cache.share_block(b1).unwrap();
+
+        let new_block = cache.copy_on_write(b1).unwrap();
+
+        assert_ne!(new_block, b1);
+        // Original still has refcount 1, new block allocated
+        assert_eq!(cache.free_blocks(), 8);
+    }
+
+    #[test]
+    fn config_accessible() {
+        let cache = create_test_cache(50);
+        let config = cache.config();
+
+        assert_eq!(config.max_blocks, 50);
+        assert_eq!(config.tokens_per_block, 16);
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    prop_compose! {
+        fn arb_cache_config()(
+            max_blocks in 10usize..100,
+            tokens_per_block in prop::sample::select(vec![8usize, 16, 32]),
+        ) -> KvCacheConfig {
+            KvCacheConfig {
+                num_layers: 1,
+                num_kv_heads: 1,
+                head_dim: 64,
+                max_blocks,
+                tokens_per_block,
+            }
+        }
+    }
+
+    proptest! {
+        /// Invariant: free_blocks + used_blocks == total_blocks
+        #[test]
+        fn invariant_block_count_consistency(
+            config in arb_cache_config(),
+            alloc_count in 0usize..50,
+        ) {
+            let mut cache = KvCache::new(config.clone()).unwrap();
+            let max_alloc = alloc_count.min(config.max_blocks);
+
+            let mut allocated = Vec::new();
+            for _ in 0..max_alloc {
+                if let Ok(block) = cache.allocate_block() {
+                    allocated.push(block);
+                }
+            }
+
+            // Invariant must hold
+            prop_assert_eq!(
+                cache.free_blocks() + cache.used_blocks(),
+                cache.total_blocks()
+            );
+        }
+
+        /// Invariant: allocate -> free cycle returns to original state
+        #[test]
+        fn invariant_allocate_free_cycle(
+            config in arb_cache_config(),
+            cycle_count in 1usize..20,
+        ) {
+            let mut cache = KvCache::new(config.clone()).unwrap();
+            let initial_free = cache.free_blocks();
+
+            for _ in 0..cycle_count {
+                let block = cache.allocate_block().unwrap();
+                cache.free_block(block).unwrap();
+            }
+
+            prop_assert_eq!(cache.free_blocks(), initial_free);
+        }
+
+        /// Invariant: share N times requires N+1 frees to return block
+        #[test]
+        fn invariant_refcount_matches_shares(
+            config in arb_cache_config(),
+            share_count in 0usize..10,
+        ) {
+            let mut cache = KvCache::new(config).unwrap();
+            let initial_free = cache.free_blocks();
+
+            let block = cache.allocate_block().unwrap();
+
+            // Share N times (refcount = N+1)
+            for _ in 0..share_count {
+                cache.share_block(block).unwrap();
+            }
+
+            // Free N times - block not returned yet
+            for _ in 0..share_count {
+                cache.free_block(block).unwrap();
+                prop_assert_eq!(cache.free_blocks(), initial_free - 1);
+            }
+
+            // Final free - block returned
+            cache.free_block(block).unwrap();
+            prop_assert_eq!(cache.free_blocks(), initial_free);
+        }
+
+        /// Invariant: CoW on unshared block is identity
+        #[test]
+        fn invariant_cow_unshared_identity(config in arb_cache_config()) {
+            let mut cache = KvCache::new(config).unwrap();
+
+            let block = cache.allocate_block().unwrap();
+            let result = cache.copy_on_write(block).unwrap();
+
+            prop_assert_eq!(result, block);
+        }
+
+        /// Invariant: CoW on shared block creates new block
+        #[test]
+        fn invariant_cow_shared_creates_new(
+            config in arb_cache_config(),
+        ) {
+            let mut cache = KvCache::new(config).unwrap();
+
+            let block = cache.allocate_block().unwrap();
+            cache.share_block(block).unwrap();
+
+            let new_block = cache.copy_on_write(block).unwrap();
+
+            prop_assert_ne!(new_block, block);
+        }
+    }
 }
