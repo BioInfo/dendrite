@@ -43,11 +43,17 @@ pub use dendrite_ffi as ffi;
 
 mod engine;
 
-pub use engine::{Engine, EngineBuilder, EngineConfig};
+pub use engine::{
+    Engine, EngineBuilder, EngineConfig, GenerateRequest, GenerateResult, ScoringMethod,
+    TreeSearchConfig,
+};
 
 /// Commonly used types.
 pub mod prelude {
-    pub use crate::engine::{Engine, EngineBuilder, EngineConfig};
+    pub use crate::engine::{
+        Engine, EngineBuilder, EngineConfig, GenerateRequest, GenerateResult, ScoringMethod,
+        TreeSearchConfig,
+    };
     pub use crate::{
         attention::AttentionBackend,
         cache::{KvCache, KvCacheConfig},

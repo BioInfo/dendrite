@@ -12,21 +12,21 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 
-pub mod cache;
 pub mod attention;
-pub mod tree;
-pub mod scheduler;
-pub mod model;
-pub mod grammar;
+pub mod cache;
 pub mod error;
+pub mod grammar;
+pub mod model;
+pub mod scheduler;
+pub mod tree;
 
 pub use error::{DendriteError, Result};
 
 /// Re-export commonly used types
 pub mod prelude {
-    pub use crate::cache::{KvCache, Block, BlockTable};
-    pub use crate::tree::{TreeNode, TreeState, ForkHandle};
-    pub use crate::scheduler::{Scheduler, Request, BatchConfig};
     pub use crate::attention::AttentionBackend;
+    pub use crate::cache::{Block, BlockTable, KvCache};
     pub use crate::error::{DendriteError, Result};
+    pub use crate::scheduler::{BatchConfig, Request, Scheduler};
+    pub use crate::tree::{ForkHandle, TreeNode, TreeState};
 }

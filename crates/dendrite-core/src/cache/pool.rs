@@ -13,6 +13,7 @@ pub struct BlockPool {
     /// Free block IDs.
     free_list: Mutex<VecDeque<BlockId>>,
     /// Tokens per block.
+    #[allow(dead_code)]
     tokens_per_block: usize,
 }
 
