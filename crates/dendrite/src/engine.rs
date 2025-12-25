@@ -124,7 +124,7 @@ impl EngineBuilder {
         let scheduler = Scheduler::new(batch_config, tree_state.clone());
 
         // Create model with reference attention backend
-        let attention = Arc::new(ReferenceBackend);
+        let attention = Arc::new(ReferenceBackend::new());
         let device = candle_core::Device::Cpu; // TODO: GPU support
         let model = Transformer::new(model_config, attention, device);
 
