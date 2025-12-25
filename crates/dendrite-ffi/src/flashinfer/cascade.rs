@@ -95,9 +95,12 @@ impl CascadeAttention {
         _stream: *mut std::ffi::c_void,
     ) -> Result<()> {
         // TODO: Call FlashInfer cascade kernel via FFI
-        Err(FfiError::NotAvailable("FlashInfer cascade FFI not yet implemented".into()))
+        Err(FfiError::NotAvailable(
+            "FlashInfer cascade FFI not yet implemented".into(),
+        ))
     }
 
+    /// Run cascade attention (no-op without CUDA).
     #[cfg(not(feature = "cuda"))]
     pub fn run(&self) -> Result<()> {
         Err(FfiError::NotAvailable("CUDA not available".into()))
@@ -109,12 +112,8 @@ impl CascadeAttention {
 /// Given outputs and log-sum-exp values from two attention computations,
 /// combine them correctly for cascade attention.
 #[inline]
-pub fn merge_attention_outputs(
-    o1: f32,
-    lse1: f32,
-    o2: f32,
-    lse2: f32,
-) -> (f32, f32) {
+#[allow(dead_code)]
+pub fn merge_attention_outputs(o1: f32, lse1: f32, o2: f32, lse2: f32) -> (f32, f32) {
     let max_lse = lse1.max(lse2);
     let exp1 = (lse1 - max_lse).exp();
     let exp2 = (lse2 - max_lse).exp();

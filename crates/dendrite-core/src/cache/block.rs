@@ -108,3 +108,94 @@ impl Block {
         self.num_tokens = 0;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn block_id_validity() {
+        let valid = BlockId(42);
+        assert!(valid.is_valid());
+
+        let invalid = BlockId::INVALID;
+        assert!(!invalid.is_valid());
+    }
+
+    #[test]
+    fn block_id_conversions() {
+        let id: BlockId = 42u32.into();
+        assert_eq!(id.0, 42);
+
+        let val: u32 = id.into();
+        assert_eq!(val, 42);
+    }
+
+    #[test]
+    fn new_block_has_refcount_one() {
+        let block = Block::new(BlockId(0), 16);
+        assert_eq!(block.refcount(), 1);
+        assert!(!block.is_shared());
+    }
+
+    #[test]
+    fn inc_ref_increases_refcount() {
+        let block = Block::new(BlockId(0), 16);
+        assert_eq!(block.inc_ref(), 2);
+        assert_eq!(block.refcount(), 2);
+        assert!(block.is_shared());
+    }
+
+    #[test]
+    fn dec_ref_decreases_refcount() {
+        let block = Block::new(BlockId(0), 16);
+        block.inc_ref();
+        assert_eq!(block.dec_ref(), 1);
+        assert_eq!(block.refcount(), 1);
+        assert!(!block.is_shared());
+    }
+
+    #[test]
+    fn new_block_is_empty() {
+        let block = Block::new(BlockId(0), 16);
+        assert_eq!(block.num_tokens(), 0);
+        assert!(!block.is_full());
+        assert_eq!(block.remaining(), 16);
+    }
+
+    #[test]
+    fn add_tokens_updates_count() {
+        let mut block = Block::new(BlockId(0), 16);
+        block.add_tokens(5);
+        assert_eq!(block.num_tokens(), 5);
+        assert_eq!(block.remaining(), 11);
+        assert!(!block.is_full());
+    }
+
+    #[test]
+    fn block_becomes_full() {
+        let mut block = Block::new(BlockId(0), 16);
+        block.add_tokens(16);
+        assert!(block.is_full());
+        assert_eq!(block.remaining(), 0);
+    }
+
+    #[test]
+    fn add_tokens_clamps_to_capacity() {
+        let mut block = Block::new(BlockId(0), 16);
+        block.add_tokens(100);
+        assert_eq!(block.num_tokens(), 16);
+    }
+
+    #[test]
+    fn reset_clears_block() {
+        let mut block = Block::new(BlockId(0), 16);
+        block.inc_ref();
+        block.add_tokens(10);
+
+        block.reset();
+
+        assert_eq!(block.refcount(), 1);
+        assert_eq!(block.num_tokens(), 0);
+    }
+}

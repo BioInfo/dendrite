@@ -39,8 +39,7 @@ pub struct Device {
 impl Device {
     /// Create a new CUDA device handle.
     pub fn new(ordinal: usize) -> Result<Self> {
-        let device = CudaDevice::new(ordinal)
-            .map_err(|e| FfiError::CudaError(e.to_string()))?;
+        let device = CudaDevice::new(ordinal).map_err(|e| FfiError::CudaError(e.to_string()))?;
         Ok(Self { device })
     }
 

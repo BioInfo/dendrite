@@ -1,0 +1,11 @@
+# Rustfmt configuration for Dendrite
+# https://rust-lang.github.io/rustfmt/
+# Note: Only stable options are used for compatibility
+
+edition = "2021"
+max_width = 100
+tab_spaces = 4
+use_field_init_shorthand = true
+use_try_shorthand = true
+reorder_imports = true
+fn_params_layout = "Tall"

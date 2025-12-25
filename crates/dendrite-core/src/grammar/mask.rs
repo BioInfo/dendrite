@@ -14,7 +14,7 @@ pub struct TokenMask {
 impl TokenMask {
     /// Create a mask that allows all tokens.
     pub fn allow_all(vocab_size: usize) -> Self {
-        let num_words = (vocab_size + 63) / 64;
+        let num_words = vocab_size.div_ceil(64);
         let mut mask = vec![u64::MAX; num_words];
 
         // Clear bits beyond vocab_size
@@ -32,7 +32,7 @@ impl TokenMask {
 
     /// Create a mask that blocks all tokens.
     pub fn block_all(vocab_size: usize) -> Self {
-        let num_words = (vocab_size + 63) / 64;
+        let num_words = vocab_size.div_ceil(64);
         Self {
             mask: vec![0; num_words],
             vocab_size,
@@ -131,12 +131,7 @@ impl TokenMask {
 
     /// Get the raw mask as bytes (for GPU transfer).
     pub fn as_bytes(&self) -> &[u8] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.mask.as_ptr() as *const u8,
-                self.mask.len() * 8,
-            )
-        }
+        unsafe { std::slice::from_raw_parts(self.mask.as_ptr() as *const u8, self.mask.len() * 8) }
     }
 }
 

@@ -78,10 +78,7 @@ impl Batch {
 
     /// Create a mixed batch.
     pub fn mixed(prefill_requests: Vec<Request>, decode_requests: Vec<Request>) -> Self {
-        let num_input_tokens: usize = prefill_requests
-            .iter()
-            .map(|r| r.input_tokens.len())
-            .sum();
+        let num_input_tokens: usize = prefill_requests.iter().map(|r| r.input_tokens.len()).sum();
         let num_output_tokens = decode_requests.len();
 
         let mut requests = prefill_requests;
