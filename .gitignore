@@ -5,6 +5,10 @@
 # Internal docs (not published)
 /docs/
 
+# Claude Code local files
+CLAUDE.md
+.claude/
+
 # Cargo lock for libraries
 # Cargo.lock is included for reproducible builds
 
