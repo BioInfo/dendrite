@@ -6,6 +6,35 @@
 
 ---
 
+## Development Methodology
+
+**TDD + Property-Based Testing** — The gold standard for infrastructure:
+
+```
+1. Write failing test (defines expected behavior)
+2. Implement minimum code to pass
+3. Refactor while keeping tests green
+4. Add property tests for invariants
+5. CI blocks merge on any failure
+```
+
+**Why this builds trust:**
+- Contributors can safely refactor with green test suite
+- Property tests find edge cases humans miss
+- Benchmarks prove performance claims empirically
+- Miri catches undefined behavior
+
+**CI Pipeline (GitHub Actions):**
+- `cargo check` — Compilation
+- `cargo fmt --check` — Formatting
+- `cargo clippy --all-targets -D warnings` — Linting (strict)
+- `cargo test` — Unit + integration tests
+- `cargo doc` — Documentation builds
+- `cargo-deny` — Dependency audit
+- MSRV check (Rust 1.75)
+
+---
+
 ## Milestone 1: Foundation (Weeks 1-2)
 **Goal:** Correct reference implementation for testing
 
@@ -14,9 +43,14 @@
 - [x] Tree state management with O(1) fork
 - [x] Scheduler with prefill/decode separation
 - [x] Attention backend trait
-- [ ] Reference attention implementation (CPU)
-- [ ] Property-based tests for invariants
+- [x] CI pipeline (GitHub Actions)
+- [x] Code quality configs (clippy.toml, rustfmt.toml, deny.toml)
+- [x] Issue/PR templates, CONTRIBUTING.md
+- [x] Unit tests: Block, BlockId, NodeId, TreeNode (22 tests passing)
+- [ ] Unit tests: BlockPool, BlockTable, TreeState
+- [ ] Property-based tests for CoW invariants
 - [ ] Fork correctness test suite
+- [ ] Reference attention implementation (CPU)
 
 **Exit Criteria:** All invariant tests pass, fork is demonstrably O(1)
 
@@ -106,6 +140,27 @@
 
 ---
 
+## Test Coverage Targets
+
+| Module | Unit | Property | Integration | Status |
+|--------|------|----------|-------------|--------|
+| cache/block.rs | ✓ | - | - | Done |
+| cache/block_table.rs | - | - | - | Pending |
+| cache/pool.rs | - | ✓ | - | Next |
+| tree/node.rs | ✓ | - | - | Done |
+| tree/state.rs | - | ✓ | - | Next |
+| scheduler/* | - | - | - | Pending |
+| attention/* | - | - | ✓ | Pending |
+| grammar/* | ✓ | - | - | Partial |
+
+**Key Invariants to Test:**
+1. Refcount sum equals active references
+2. No cycles in block graph
+3. Free list contains only refcount=0 blocks
+4. All sequences have valid block mappings
+
+---
+
 ## Performance Targets
 
 | Metric | Target | Status |
@@ -127,6 +182,7 @@
 | FlashInfer | 0.2.x | Attention kernels |
 | CUDA | 12.x | GPU acceleration |
 | llguidance | TBD | Grammar constraints |
+| proptest | 1.5+ | Property-based testing |
 
 ---
 
