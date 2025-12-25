@@ -1,0 +1,47 @@
+# Build artifacts
+/target/
+**/*.rs.bk
+
+# Cargo lock for libraries
+# Cargo.lock is included for reproducible builds
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# CUDA build artifacts
+*.ptx
+*.cubin
+*.fatbin
+
+# FlashInfer bindings (generated)
+flashinfer_bindings.rs
+
+# Benchmark results
+*.json
+
+# Model weights (large files)
+*.safetensors
+*.bin
+*.gguf
+*.ggml
+
+# Logs
+*.log
+
+# Python (if using for testing)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Coverage
+*.profraw
+*.profdata
+coverage/
