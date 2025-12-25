@@ -1,0 +1,80 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/dendrite",
+    "crates/dendrite-core",
+    "crates/dendrite-ffi",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+repository = "https://github.com/justinjohnson/dendrite"
+homepage = "https://github.com/justinjohnson/dendrite"
+description = "Agent-native inference engine with O(1) fork latency for tree-structured reasoning"
+keywords = ["llm", "inference", "tree-of-thought", "mcts", "gpu"]
+categories = ["science", "algorithms", "api-bindings"]
+authors = ["Justin Johnson"]
+
+[workspace.dependencies]
+# Core dependencies
+tokio = { version = "1.42", features = ["full"] }
+rayon = "1.10"
+anyhow = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Async & concurrency
+async-trait = "0.1"
+futures = "0.3"
+parking_lot = "0.12"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rkyv = { version = "0.8", features = ["validation"] }
+
+# ML Framework (Candle)
+candle-core = { git = "https://github.com/huggingface/candle" }
+candle-nn = { git = "https://github.com/huggingface/candle" }
+candle-transformers = { git = "https://github.com/huggingface/candle" }
+
+# CUDA bindings
+cudarc = { version = "0.12", features = ["driver"] }
+
+# Tokenizer
+tokenizers = "0.21"
+
+# FFI
+bindgen = "0.71"
+
+# Testing
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.5"
+rstest = "0.23"
+
+# CLI (for benchmarks/examples)
+clap = { version = "4.5", features = ["derive"] }
+
+# Internal crates
+dendrite = { path = "crates/dendrite" }
+dendrite-core = { path = "crates/dendrite-core" }
+dendrite-ffi = { path = "crates/dendrite-ffi" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3
+
+[profile.bench]
+inherits = "release"
+debug = true
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

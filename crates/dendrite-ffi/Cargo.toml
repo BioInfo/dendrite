@@ -1,0 +1,32 @@
+[package]
+name = "dendrite-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "FFI bindings for FlashInfer and CUDA kernels"
+keywords = ["ffi", "cuda", "flashinfer", "gpu"]
+categories = ["api-bindings", "external-ffi-bindings"]
+links = "flashinfer"
+
+[features]
+default = []
+cuda = ["dep:cudarc"]
+
+[dependencies]
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# CUDA (optional)
+cudarc = { workspace = true, optional = true }
+
+[build-dependencies]
+bindgen = { workspace = true }
+cc = "1.2"
+pkg-config = "0.3"
+
+[dev-dependencies]
+rstest = { workspace = true }

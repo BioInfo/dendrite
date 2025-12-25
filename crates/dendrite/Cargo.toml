@@ -1,0 +1,45 @@
+[package]
+name = "dendrite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[features]
+default = []
+cuda = ["dendrite-core/cuda", "dendrite-ffi/cuda"]
+full = ["cuda"]
+
+[dependencies]
+# Core crates
+dendrite-core = { workspace = true }
+dendrite-ffi = { workspace = true }
+
+# Re-exported dependencies
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+parking_lot = { workspace = true }
+candle-core = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+rstest = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "macros"] }
+clap = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[[example]]
+name = "tree_of_thought"
+path = "examples/tree_of_thought.rs"
+
+[[example]]
+name = "json_output"
+path = "examples/json_output.rs"
