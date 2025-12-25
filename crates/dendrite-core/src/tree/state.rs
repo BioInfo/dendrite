@@ -210,3 +210,182 @@ pub struct NodeInfo {
     /// Whether node is active.
     pub is_active: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cache::KvCacheConfig;
+
+    fn create_test_tree_state() -> TreeState {
+        let config = KvCacheConfig {
+            num_layers: 1,
+            num_kv_heads: 1,
+            head_dim: 64,
+            max_blocks: 100,
+            tokens_per_block: 16,
+        };
+        let kv_cache = Arc::new(RwLock::new(KvCache::new(config).unwrap()));
+        TreeState::new(kv_cache, 16)
+    }
+
+    #[test]
+    fn new_creates_root_node() {
+        let state = create_test_tree_state();
+
+        let root_info = state.get_node(NodeId::ROOT);
+        assert!(root_info.is_some());
+
+        let info = root_info.unwrap();
+        assert_eq!(info.id, NodeId::ROOT);
+        assert!(info.parent.is_none());
+        assert!(info.is_active);
+        assert_eq!(info.num_children, 0);
+    }
+
+    #[test]
+    fn fork_creates_child_node() {
+        let state = create_test_tree_state();
+
+        let handle = state.fork(NodeId::ROOT).unwrap();
+
+        assert_ne!(handle.node_id, NodeId::ROOT);
+        assert_eq!(handle.depth, 1);
+
+        let child_info = state.get_node(handle.node_id).unwrap();
+        assert_eq!(child_info.parent, Some(NodeId::ROOT));
+        assert!(child_info.is_active);
+    }
+
+    #[test]
+    fn fork_increments_parent_child_count() {
+        let state = create_test_tree_state();
+
+        let root_before = state.get_node(NodeId::ROOT).unwrap();
+        assert_eq!(root_before.num_children, 0);
+
+        state.fork(NodeId::ROOT).unwrap();
+
+        let root_after = state.get_node(NodeId::ROOT).unwrap();
+        assert_eq!(root_after.num_children, 1);
+
+        state.fork(NodeId::ROOT).unwrap();
+
+        let root_after2 = state.get_node(NodeId::ROOT).unwrap();
+        assert_eq!(root_after2.num_children, 2);
+    }
+
+    #[test]
+    fn fork_from_invalid_node_returns_error() {
+        let state = create_test_tree_state();
+        let invalid_id = NodeId(99999);
+
+        let result = state.fork(invalid_id);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn deep_fork_chain_calculates_depth() {
+        let state = create_test_tree_state();
+
+        // Fork depth 1
+        let h1 = state.fork(NodeId::ROOT).unwrap();
+        assert_eq!(h1.depth, 1);
+
+        // Fork depth 2
+        let h2 = state.fork(h1.node_id).unwrap();
+        assert_eq!(h2.depth, 2);
+
+        // Fork depth 3
+        let h3 = state.fork(h2.node_id).unwrap();
+        assert_eq!(h3.depth, 3);
+
+        // Fork depth 4
+        let h4 = state.fork(h3.node_id).unwrap();
+        assert_eq!(h4.depth, 4);
+    }
+
+    #[test]
+    fn multiple_forks_from_same_parent() {
+        let state = create_test_tree_state();
+
+        let h1 = state.fork(NodeId::ROOT).unwrap();
+        let h2 = state.fork(NodeId::ROOT).unwrap();
+        let h3 = state.fork(NodeId::ROOT).unwrap();
+
+        // All should be depth 1
+        assert_eq!(h1.depth, 1);
+        assert_eq!(h2.depth, 1);
+        assert_eq!(h3.depth, 1);
+
+        // All should have ROOT as parent
+        assert_eq!(state.get_node(h1.node_id).unwrap().parent, Some(NodeId::ROOT));
+        assert_eq!(state.get_node(h2.node_id).unwrap().parent, Some(NodeId::ROOT));
+        assert_eq!(state.get_node(h3.node_id).unwrap().parent, Some(NodeId::ROOT));
+
+        // Root should have 3 children
+        assert_eq!(state.get_node(NodeId::ROOT).unwrap().num_children, 3);
+    }
+
+    #[test]
+    fn get_node_returns_none_for_invalid() {
+        let state = create_test_tree_state();
+        let invalid_id = NodeId(99999);
+
+        assert!(state.get_node(invalid_id).is_none());
+    }
+
+    #[test]
+    fn release_deactivates_node() {
+        let state = create_test_tree_state();
+        let handle = state.fork(NodeId::ROOT).unwrap();
+
+        let before = state.get_node(handle.node_id).unwrap();
+        assert!(before.is_active);
+
+        state.release(handle.node_id).unwrap();
+
+        // Node might be GC'd, so we check if it's gone or inactive
+        if let Some(after) = state.get_node(handle.node_id) {
+            assert!(!after.is_active);
+        }
+    }
+
+    #[test]
+    fn release_decrements_parent_child_count() {
+        let state = create_test_tree_state();
+
+        let h1 = state.fork(NodeId::ROOT).unwrap();
+        let h2 = state.fork(NodeId::ROOT).unwrap();
+
+        assert_eq!(state.get_node(NodeId::ROOT).unwrap().num_children, 2);
+
+        state.release(h1.node_id).unwrap();
+
+        assert_eq!(state.get_node(NodeId::ROOT).unwrap().num_children, 1);
+
+        state.release(h2.node_id).unwrap();
+
+        assert_eq!(state.get_node(NodeId::ROOT).unwrap().num_children, 0);
+    }
+
+    #[test]
+    fn get_block_table_returns_blocks() {
+        let state = create_test_tree_state();
+
+        // Root starts with empty block table
+        let root_blocks = state.get_block_table(NodeId::ROOT);
+        assert!(root_blocks.is_some());
+        assert!(root_blocks.unwrap().is_empty());
+    }
+
+    #[test]
+    fn fork_handle_contains_correct_info() {
+        let state = create_test_tree_state();
+
+        let handle = state.fork(NodeId::ROOT).unwrap();
+
+        assert!(handle.node_id.is_valid());
+        assert_eq!(handle.depth, 1);
+        assert_eq!(handle.num_tokens, 0); // No tokens added yet
+    }
+}
