@@ -1,0 +1,23 @@
+# Clippy configuration for Dendrite
+# https://doc.rust-lang.org/clippy/configuration.html
+
+# MSRV for lint compatibility
+msrv = "1.75"
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 25
+
+# Type complexity threshold
+type-complexity-threshold = 350
+
+# Too many arguments threshold
+too-many-arguments-threshold = 8
+
+# Too many lines threshold
+too-many-lines-threshold = 150
+
+# Allowed names for variables (common in ML/GPU code)
+allowed-idents-below-min-chars = ["x", "y", "k", "v", "q", "n", "m", "i", "j"]
+
+# Doc comment length
+doc-valid-idents = ["FlashInfer", "PagedAttention", "KV", "CUDA", "GPU", "CPU", "MCTS", "LLM"]

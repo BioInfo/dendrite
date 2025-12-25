@@ -8,5 +8,5 @@
 mod node;
 mod state;
 
-pub use node::{TreeNode, NodeId};
-pub use state::{TreeState, ForkHandle};
+pub use node::{NodeId, TreeNode};
+pub use state::{ForkHandle, TreeState};

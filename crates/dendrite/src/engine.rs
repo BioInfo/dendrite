@@ -5,7 +5,7 @@ use dendrite_core::{
     attention::ReferenceBackend,
     cache::{KvCache, KvCacheConfig},
     model::{ModelConfig, Transformer},
-    scheduler::{BatchConfig, Request, Scheduler},
+    scheduler::{BatchConfig, Scheduler},
     tree::TreeState,
 };
 use parking_lot::RwLock;
@@ -98,8 +98,8 @@ impl EngineBuilder {
         let model_config = self.model_config.unwrap_or_default();
 
         // Calculate KV cache size
-        let max_blocks = self.config.max_seq_len / self.config.tokens_per_block
-            * self.config.max_batch_size;
+        let max_blocks =
+            self.config.max_seq_len / self.config.tokens_per_block * self.config.max_batch_size;
 
         let kv_config = KvCacheConfig {
             num_layers: model_config.num_hidden_layers,
@@ -191,7 +191,10 @@ impl Engine {
     }
 
     /// Fork from current state for tree search.
-    pub fn fork(&self, from_node: dendrite_core::tree::NodeId) -> Result<dendrite_core::tree::ForkHandle> {
+    pub fn fork(
+        &self,
+        from_node: dendrite_core::tree::NodeId,
+    ) -> Result<dendrite_core::tree::ForkHandle> {
         Ok(self.tree_state.fork(from_node)?)
     }
 
@@ -208,7 +211,9 @@ impl Engine {
 
 /// A generation request.
 pub struct GenerateRequest<'a> {
+    #[allow(dead_code)]
     engine: &'a Engine,
+    #[allow(dead_code)]
     prompt: String,
     max_tokens: usize,
     temperature: f32,

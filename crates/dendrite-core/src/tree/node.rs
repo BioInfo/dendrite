@@ -145,3 +145,101 @@ impl TreeNode {
         self.block_table.num_tokens()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn node_id_validity() {
+        let valid = NodeId(42);
+        assert!(valid.is_valid());
+
+        let invalid = NodeId::INVALID;
+        assert!(!invalid.is_valid());
+
+        assert!(NodeId::ROOT.is_valid());
+    }
+
+    #[test]
+    fn node_id_generates_unique_ids() {
+        let id1 = NodeId::new();
+        let id2 = NodeId::new();
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn root_node_has_no_parent() {
+        let root = TreeNode::root(16);
+        assert_eq!(root.id(), NodeId::ROOT);
+        assert!(root.parent().is_none());
+        assert!(root.is_active());
+    }
+
+    #[test]
+    fn fork_creates_child_with_parent() {
+        let root = TreeNode::root(16);
+        let child = root.fork();
+
+        assert_ne!(child.id(), root.id());
+        assert_eq!(child.parent(), Some(NodeId::ROOT));
+        assert!(child.is_active());
+    }
+
+    #[test]
+    fn add_token_appends_to_tokens() {
+        let mut node = TreeNode::root(16);
+        assert!(node.tokens().is_empty());
+
+        node.add_token(42);
+        node.add_token(43);
+
+        assert_eq!(node.tokens(), &[42, 43]);
+    }
+
+    #[test]
+    fn child_count_tracking() {
+        let mut node = TreeNode::root(16);
+        assert_eq!(node.num_children(), 0);
+
+        node.add_child();
+        node.add_child();
+        assert_eq!(node.num_children(), 2);
+
+        node.remove_child();
+        assert_eq!(node.num_children(), 1);
+    }
+
+    #[test]
+    fn remove_child_saturates_at_zero() {
+        let mut node = TreeNode::root(16);
+        node.remove_child();
+        assert_eq!(node.num_children(), 0);
+    }
+
+    #[test]
+    fn deactivate_node() {
+        let mut node = TreeNode::root(16);
+        assert!(node.is_active());
+
+        node.deactivate();
+        assert!(!node.is_active());
+    }
+
+    #[test]
+    fn can_gc_when_inactive_and_no_children() {
+        let mut node = TreeNode::root(16);
+
+        // Active node cannot be GC'd
+        assert!(!node.can_gc());
+
+        // Inactive with children cannot be GC'd
+        node.add_child();
+        node.deactivate();
+        assert!(!node.can_gc());
+
+        // Inactive with no children can be GC'd
+        node.remove_child();
+        assert!(node.can_gc());
+    }
+}

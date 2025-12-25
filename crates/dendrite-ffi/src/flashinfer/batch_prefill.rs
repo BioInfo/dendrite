@@ -96,9 +96,12 @@ impl BatchPrefillKernel {
         _stream: *mut std::ffi::c_void,
     ) -> Result<()> {
         // TODO: Call FlashInfer kernel via FFI
-        Err(FfiError::NotAvailable("FlashInfer FFI not yet implemented".into()))
+        Err(FfiError::NotAvailable(
+            "FlashInfer FFI not yet implemented".into(),
+        ))
     }
 
+    /// Run batch prefill attention (no-op without CUDA).
     #[cfg(not(feature = "cuda"))]
     pub fn run(&self) -> Result<()> {
         Err(FfiError::NotAvailable("CUDA not available".into()))

@@ -12,6 +12,7 @@ pub struct Transformer {
     /// Model configuration.
     config: ModelConfig,
     /// Attention backend.
+    #[allow(dead_code)]
     attention: Arc<dyn AttentionBackend>,
     /// Device for computation.
     device: Device,
@@ -23,11 +24,7 @@ pub struct Transformer {
 
 impl Transformer {
     /// Create a new transformer (weights not loaded).
-    pub fn new(
-        config: ModelConfig,
-        attention: Arc<dyn AttentionBackend>,
-        device: Device,
-    ) -> Self {
+    pub fn new(config: ModelConfig, attention: Arc<dyn AttentionBackend>, device: Device) -> Self {
         Self {
             config,
             attention,
@@ -55,11 +52,7 @@ impl Transformer {
     }
 
     /// Forward pass for prefill (process input tokens).
-    pub async fn prefill(
-        &self,
-        input_ids: &Tensor,
-        block_table: &BlockTable,
-    ) -> Result<Tensor> {
+    pub async fn prefill(&self, input_ids: &Tensor, _block_table: &BlockTable) -> Result<Tensor> {
         // TODO: Implement full forward pass
         // 1. Embed tokens
         // 2. For each layer:
@@ -83,9 +76,9 @@ impl Transformer {
     /// Forward pass for decode (single token).
     pub async fn decode(
         &self,
-        input_ids: &Tensor,
-        block_table: &BlockTable,
-        position: usize,
+        _input_ids: &Tensor,
+        _block_table: &BlockTable,
+        _position: usize,
     ) -> Result<Tensor> {
         // TODO: Implement decode forward pass
         // Similar to prefill but for single token
