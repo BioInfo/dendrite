@@ -26,6 +26,7 @@ pub struct TreeState {
     /// KV cache for block management.
     kv_cache: Arc<RwLock<KvCache>>,
     /// Tokens per block.
+    #[allow(dead_code)]
     tokens_per_block: usize,
 }
 

@@ -6,12 +6,12 @@
 //! - Preemption and swapping
 
 mod batch;
-mod request;
 mod policy;
+mod request;
 
 pub use batch::{Batch, BatchConfig};
-pub use request::{Request, RequestState, RequestId};
 pub use policy::SchedulingPolicy;
+pub use request::{Request, RequestId, RequestState};
 
 use crate::error::Result;
 use crate::tree::TreeState;
@@ -29,8 +29,10 @@ pub struct Scheduler {
     /// Configuration.
     config: BatchConfig,
     /// Tree state for KV cache management.
+    #[allow(dead_code)]
     tree_state: Arc<TreeState>,
     /// Scheduling policy.
+    #[allow(dead_code)]
     policy: SchedulingPolicy,
 }
 

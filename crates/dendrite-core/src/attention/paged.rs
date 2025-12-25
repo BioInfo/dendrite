@@ -35,7 +35,7 @@ impl PagedAttention {
 
     /// Allocate blocks for a sequence.
     pub fn allocate_sequence(&self, num_tokens: usize) -> Result<BlockTable> {
-        let num_blocks = (num_tokens + self.tokens_per_block - 1) / self.tokens_per_block;
+        let num_blocks = num_tokens.div_ceil(self.tokens_per_block);
         let mut block_table = BlockTable::with_capacity(self.tokens_per_block, num_blocks);
 
         let mut cache = self.kv_cache.write();
@@ -62,7 +62,7 @@ impl PagedAttention {
 
         // Check if we need new blocks
         let current_blocks = block_table.num_blocks();
-        let needed_blocks = (new_total + self.tokens_per_block - 1) / self.tokens_per_block;
+        let needed_blocks = new_total.div_ceil(self.tokens_per_block);
 
         let mut cache = self.kv_cache.write();
         for _ in current_blocks..needed_blocks {
