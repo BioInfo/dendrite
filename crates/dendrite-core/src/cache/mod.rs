@@ -4,6 +4,46 @@
 //! - Fixed-size blocks (16 tokens per block)
 //! - Reference counting for copy-on-write
 //! - Block tables for logical-to-physical mapping
+//!
+//! # Architecture
+//!
+//! The KV cache is organized into three layers:
+//!
+//! 1. **Block Pool** - Pre-allocated pool of physical blocks
+//! 2. **Block Table** - Per-sequence logical-to-physical mapping
+//! 3. **KV Cache** - High-level API for allocation and CoW
+//!
+//! # Example
+//!
+//! ```rust
+//! use dendrite_core::cache::{KvCache, KvCacheConfig};
+//!
+//! // Configure the cache
+//! let config = KvCacheConfig {
+//!     num_layers: 32,
+//!     num_kv_heads: 8,
+//!     head_dim: 128,
+//!     max_blocks: 1000,
+//!     tokens_per_block: 16,
+//! };
+//!
+//! // Create the cache
+//! let mut cache = KvCache::new(config).unwrap();
+//!
+//! // Allocate a block
+//! let block = cache.allocate_block().unwrap();
+//!
+//! // Share for copy-on-write
+//! cache.share_block(block).unwrap();
+//!
+//! // Copy-on-write returns new block if shared
+//! let new_block = cache.copy_on_write(block).unwrap();
+//! assert_ne!(block, new_block);
+//!
+//! // Free blocks
+//! cache.free_block(block).unwrap();
+//! cache.free_block(new_block).unwrap();
+//! ```
 
 mod block;
 mod block_table;
