@@ -126,7 +126,7 @@ impl EngineBuilder {
         // Create model with reference attention backend
         let attention = Arc::new(ReferenceBackend::new());
         let device = candle_core::Device::Cpu; // TODO: GPU support
-        let model = Transformer::new(model_config, attention, device);
+        let model = Transformer::new(model_config, attention, device)?;
 
         Ok(Engine {
             config: self.config,

@@ -40,6 +40,10 @@ pub enum DendriteError {
     #[error("grammar error: {0}")]
     GrammarError(String),
 
+    /// Shape mismatch error.
+    #[error("shape mismatch: {0}")]
+    ShapeMismatch(String),
+
     /// CUDA/GPU error.
     #[error("cuda error: {0}")]
     CudaError(String),
