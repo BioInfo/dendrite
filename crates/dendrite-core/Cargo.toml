@@ -11,7 +11,7 @@ categories = ["science", "algorithms"]
 
 [features]
 default = []
-cuda = ["dep:cudarc", "candle-core/cuda", "candle-nn/cuda"]
+cuda = ["dep:cudarc", "candle-core/cuda", "candle-nn/cuda", "dep:candle-flash-attn"]
 test-reference = []
 test-miri = []
 
@@ -42,6 +42,7 @@ candle-transformers = { workspace = true }
 
 # CUDA (optional)
 cudarc = { workspace = true, optional = true }
+candle-flash-attn = { workspace = true, optional = true }
 
 # Tokenizer
 tokenizers = { workspace = true }
