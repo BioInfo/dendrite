@@ -18,18 +18,22 @@
 
 mod config;
 mod golden;
+mod kv_cache;
 mod layer;
 mod loader;
 mod mlp;
 mod rmsnorm;
 mod rope;
+mod tokenizer;
 mod transformer;
 
 pub use config::ModelConfig;
 pub use golden::{GoldenCase, GoldenResult, GoldenSummary, GoldenTestHarness, GoldenTestable};
+pub use kv_cache::{KvCache, LayerCache};
 pub use layer::{create_causal_mask, Attention, TransformerLayer};
 pub use loader::{map_hf_name, WeightLoader};
 pub use mlp::SwiGluMlp;
 pub use rmsnorm::RmsNorm;
 pub use rope::RotaryEmbedding;
+pub use tokenizer::Tokenizer;
 pub use transformer::Transformer;

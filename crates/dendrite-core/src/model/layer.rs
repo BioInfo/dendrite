@@ -6,7 +6,7 @@
 //! - Post-attention RMSNorm
 //! - SwiGLU MLP
 
-use super::{RmsNorm, RotaryEmbedding, SwiGluMlp};
+use super::{LayerCache, RmsNorm, RotaryEmbedding, SwiGluMlp};
 use crate::error::Result;
 use candle_core::{Device, Tensor};
 
@@ -352,6 +352,66 @@ impl TransformerLayer {
     /// Get the MLP module.
     pub fn mlp(&self) -> &SwiGluMlp {
         &self.mlp
+    }
+
+    /// Forward pass with KV cache for autoregressive generation.
+    ///
+    /// This method:
+    /// 1. Computes Q, K, V projections for the new tokens
+    /// 2. Appends K, V to the cache
+    /// 3. Uses the full cached K, V for attention
+    ///
+    /// # Arguments
+    ///
+    /// * `hidden_states` - Input tensor [batch, seq_len, hidden_size]
+    /// * `rope` - Rotary position embeddings
+    /// * `cache` - Layer KV cache to read from and update
+    /// * `attention_mask` - Optional causal mask
+    ///
+    /// # Returns
+    ///
+    /// Output hidden states [batch, seq_len, hidden_size]
+    pub fn forward_with_cache(
+        &self,
+        hidden_states: &Tensor,
+        rope: &RotaryEmbedding,
+        cache: &mut LayerCache,
+        attention_mask: Option<&Tensor>,
+    ) -> Result<Tensor> {
+        // Pre-attention norm
+        let normed = self.input_layernorm.forward(hidden_states)?;
+
+        // Get Q, K, V projections
+        let (q, k, v) = self.attention.project(&normed)?;
+
+        // Get position offset from cache
+        let position = cache.seq_len();
+
+        // Apply RoPE to new tokens
+        let (q, k) = rope.apply(&q, &k, position)?;
+
+        // Append K, V to cache and get full K, V
+        let (full_k, full_v) = cache.append(&k, &v)?;
+
+        // Compute attention with full cached K, V
+        let attn_output = self.compute_attention(&q, &full_k, &full_v, attention_mask)?;
+
+        // Output projection
+        let attn_output = self.attention.output(&attn_output)?;
+
+        // Residual connection
+        let hidden_states = (hidden_states + attn_output)?;
+
+        // Post-attention norm
+        let normed = self.post_attention_layernorm.forward(&hidden_states)?;
+
+        // MLP
+        let mlp_output = self.mlp.forward(&normed)?;
+
+        // Residual connection
+        let output = (hidden_states + mlp_output)?;
+
+        Ok(output)
     }
 }
 

@@ -47,11 +47,13 @@
 
 mod block;
 mod block_table;
+mod paged;
 mod pool;
 mod radix;
 
 pub use block::{Block, BlockId};
 pub use block_table::BlockTable;
+pub use paged::{Page, PageId, PagePool, PageTable, PagedKvCache, DEFAULT_PAGE_SIZE};
 pub use pool::BlockPool;
 pub use radix::{RadixTree, RadixTreeStats};
 
