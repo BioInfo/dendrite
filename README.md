@@ -15,19 +15,22 @@ Dendrite is a specialized LLM inference engine designed for agentic workloads th
 
 ## Project Status
 
-| Component | Status | Tests |
+| Component | Status | Notes |
 |-----------|--------|-------|
-| KV Cache (CoW) | ✅ Complete | 40+ |
-| Tree State | ✅ Complete | 22 |
-| Scheduler | ✅ Complete | 37 |
-| Attention Backend | ✅ Complete | 13 |
-| Transformer (CPU) | ✅ Complete | 8 |
-| MCTS Search | ✅ Complete | 9 |
-| Beam Search | ✅ Complete | 10 |
-| Grammar Constraints | ✅ Complete | 5 |
-| FlashInfer (GPU) | 🔄 Pending | - |
+| KV Cache (CoW) | ✅ Complete | O(1) fork with reference counting |
+| Paged KV Cache | ✅ Complete | Memory-efficient page pool |
+| Tree State | ✅ Complete | Radix tree for prefix sharing |
+| Scheduler | ✅ Complete | Fair batch scheduling |
+| Attention Backend | ✅ Complete | Reference + Flash Attention |
+| Transformer | ✅ Complete | Full LLaMA architecture |
+| Tokenizer | ✅ Complete | HuggingFace tokenizers |
+| MCTS Search | ✅ Complete | UCT scoring |
+| Beam Search | ✅ Complete | Top-k beams |
+| Grammar Constraints | ✅ Complete | llguidance integration |
+| GPU Inference | ✅ Complete | candle-flash-attn |
+| FlashInfer FFI | 🔄 In Progress | Paged attention kernels |
 
-**Total: 214 tests passing**
+**266 tests passing** | Verified with TinyLlama-1.1B on NVIDIA GB10 (DGX Spark)
 
 ## Architecture
 
@@ -53,33 +56,87 @@ Dendrite is a specialized LLM inference engine designed for agentic workloads th
 
 ## Quick Start
 
+### Basic Text Generation
+
 ```rust
-use dendrite::prelude::*;
+use dendrite_core::model::{ModelConfig, Tokenizer, Transformer};
+use dendrite_core::attention::ReferenceBackend;
+use candle_core::Device;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Create engine
-    let engine = Engine::builder()
-        .model_path("model.safetensors")
-        .max_seq_len(8192)
-        .build()
+    // Load model
+    let model_path = std::path::Path::new("/path/to/tinyllama");
+    let config = ModelConfig::from_file(&model_path.join("config.json"))?;
+    let tokenizer = Tokenizer::from_dir(model_path)?;
+
+    let backend = Arc::new(ReferenceBackend::new());
+    let mut transformer = Transformer::new(config, backend, Device::Cpu)?;
+    transformer.load_weights(model_path)?;
+
+    // Generate text
+    let text = transformer
+        .generate_text(&tokenizer, "Hello, my name is", 50, 0.0)
         .await?;
 
-    // Generate with tree search
-    let result = engine
-        .generate("Let's solve this step by step:")
-        .max_tokens(256)
-        .with_tree_search(TreeSearchConfig {
-            num_branches: 3,
-            max_depth: 5,
-            scoring: ScoringMethod::LogProb,
-        })
-        .execute()
-        .await?;
-
-    println!("{}", result.text);
+    println!("{}", text);
     Ok(())
 }
+```
+
+### GPU Inference with KV Cache
+
+```rust
+use dendrite_core::model::{ModelConfig, Transformer, KvCache};
+use dendrite_core::attention::FlashAttnBackend;  // requires "cuda" feature
+use candle_core::{Device, Tensor};
+
+// Load model on GPU
+let device = Device::new_cuda(0)?;
+let backend = Arc::new(FlashAttnBackend::new(0)?);
+let mut transformer = Transformer::new(config, backend, device.clone())?;
+transformer.load_weights(model_path)?;
+
+// Create KV cache for efficient autoregressive generation
+let mut cache = transformer.create_cache();
+
+// Prefill prompt
+let prompt_tokens = vec![1u32, 15043, 29892];  // "<s>Hello,"
+let input = Tensor::from_slice(&prompt_tokens, (1, 3), &device)?;
+let logits = transformer.forward_with_cache(&input, &mut cache).await?;
+
+// Decode with cached KV (O(1) per token)
+let next_token = transformer.sample(&logits, 0.0)?;
+println!("Generated token: {}", next_token);
+```
+
+### O(1) Fork for Tree Search
+
+```rust
+use dendrite_core::cache::{PagedKvCache, DEFAULT_PAGE_SIZE};
+use candle_core::DType;
+
+// Create paged cache with O(1) fork support
+let cache = PagedKvCache::new(
+    32,                    // num_layers
+    1000,                  // initial pages
+    DEFAULT_PAGE_SIZE,     // 16 tokens/page
+    8,                     // num_kv_heads
+    128,                   // head_dim
+    DType::F16,
+    device,
+)?;
+
+// Allocate parent sequence
+let parent = cache.allocate_sequence();
+
+// O(1) fork - shares pages via copy-on-write
+let child1 = cache.fork_sequence(parent)?;
+let child2 = cache.fork_sequence(parent)?;
+
+// Each child can diverge independently
+// Pages are copied only when modified
 ```
 
 ## Crate Structure
@@ -112,17 +169,21 @@ cargo build --release --features full
 ## Running Examples
 
 ```bash
+# GPU inference with TinyLlama (requires model weights)
+cargo run -p dendrite-core --features cuda --example gpu_inference -- /path/to/tinyllama
+
+# Text generation with tokenizer integration
+cargo run -p dendrite-core --example text_inference -- /path/to/tinyllama
+
+# Golden token validation (verify vs HuggingFace)
+python scripts/generate_golden.py --model /path/to/tinyllama --output golden_cases.json
+cargo run -p dendrite-core --example golden_validation -- /path/to/tinyllama golden_cases.json
+
 # MCTS search with simulated environment
 cargo run -p dendrite-core --example mcts_search
 
 # Beam search with mock language model
 cargo run -p dendrite-core --example beam_search
-
-# Tree of Thought (high-level API, requires model)
-cargo run --example tree_of_thought
-
-# JSON output with grammar constraints
-cargo run --example json_output
 ```
 
 ## Benchmarks

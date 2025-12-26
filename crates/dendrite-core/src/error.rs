@@ -28,6 +28,10 @@ pub enum DendriteError {
     #[error("scheduler error: {0}")]
     SchedulerError(String),
 
+    /// Cache operation error.
+    #[error("cache error: {0}")]
+    CacheError(String),
+
     /// Attention computation error.
     #[error("attention error: {0}")]
     AttentionError(String),

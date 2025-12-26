@@ -1,6 +1,6 @@
-//! GPU inference example with real model weights.
+//! GPU inference example with real model weights and proper KV caching.
 //!
-//! Loads TinyLlama-1.1B and runs inference on GPU.
+//! Loads TinyLlama-1.1B and runs inference on GPU with KV cache.
 //!
 //! Run with:
 //! ```bash
@@ -9,7 +9,6 @@
 
 use candle_core::Device;
 use dendrite_core::attention::ReferenceBackend;
-use dendrite_core::cache::BlockTable;
 use dendrite_core::model::{ModelConfig, Transformer};
 use std::path::Path;
 use std::sync::Arc;
@@ -20,11 +19,14 @@ use dendrite_core::attention::FlashAttnBackend;
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    let model_dir = args.get(1).map(|s| s.as_str()).unwrap_or("/home/bioinfo/models/tinyllama-1.1b");
+    let model_dir = args
+        .get(1)
+        .map(|s| s.as_str())
+        .unwrap_or("/home/bioinfo/models/tinyllama-1.1b");
     let model_path = Path::new(model_dir);
 
-    println!("GPU Inference Example");
-    println!("=====================\n");
+    println!("GPU Inference Example with KV Cache");
+    println!("====================================\n");
     println!("Model directory: {}", model_path.display());
 
     // Load config
@@ -34,10 +36,12 @@ fn main() -> anyhow::Result<()> {
     println!("  Vocab size: {}", config.vocab_size);
     println!("  Hidden size: {}", config.hidden_size);
     println!("  Layers: {}", config.num_hidden_layers);
-    println!("  Heads: {} query, {} KV (GQA {}x)",
+    println!(
+        "  Heads: {} query, {} KV (GQA {}x)",
         config.num_attention_heads,
         config.num_key_value_heads,
-        config.gqa_ratio());
+        config.gqa_ratio()
+    );
     println!("  Head dim: {}", config.head_dim());
 
     // Create device and backend
@@ -66,58 +70,86 @@ fn main() -> anyhow::Result<()> {
     let load_start = Instant::now();
     transformer.load_weights(model_path)?;
     let load_time = load_start.elapsed();
-    println!("Loaded {} layers in {:.2}s", transformer.num_layers(), load_time.as_secs_f64());
+    println!(
+        "Loaded {} layers in {:.2}s",
+        transformer.num_layers(),
+        load_time.as_secs_f64()
+    );
 
-    // Create input tokens
-    let prompt_tokens: Vec<u32> = vec![1, 15043, 29892, 590, 1024, 338]; // "Hello, my name is"
+    // Create prompt tokens (TinyLlama format)
+    // <s>Hello, my name is
+    let prompt_tokens: Vec<u32> = vec![1, 15043, 29892, 590, 1024, 338];
     println!("\nPrompt tokens: {:?}", prompt_tokens);
+    println!("(Approximate: '<s>Hello, my name is')");
 
-    // Run prefill
-    println!("\nRunning prefill...");
-    let input = candle_core::Tensor::from_slice(
-        &prompt_tokens,
-        (1, prompt_tokens.len()),
-        &device,
-    )?;
+    // Generate with proper KV caching
+    println!("\nGenerating with KV cache...");
+    let gen_start = Instant::now();
+    let generated = tokio::runtime::Runtime::new()?.block_on(async {
+        transformer.generate(&prompt_tokens, 20, 0.0).await
+    })?;
+    let gen_time = gen_start.elapsed();
 
-    let block_table = BlockTable::new(16);
+    let num_new_tokens = generated.len() - prompt_tokens.len();
+    let tokens_per_sec = num_new_tokens as f64 / gen_time.as_secs_f64();
 
+    println!("\nGeneration complete!");
+    println!("  Generated {} new tokens in {:.2}ms", num_new_tokens, gen_time.as_secs_f64() * 1000.0);
+    println!("  Throughput: {:.1} tokens/s", tokens_per_sec);
+    println!("\nGenerated token IDs: {:?}", generated);
+
+    // Now let's benchmark prefill + decode separately
+    println!("\n--- Detailed Timing ---");
+
+    // Fresh cache for benchmarking
+    let mut cache = transformer.create_cache();
+
+    // Benchmark prefill
+    let prefill_input =
+        candle_core::Tensor::from_slice(&prompt_tokens, (1, prompt_tokens.len()), &device)?;
     let prefill_start = Instant::now();
-    let logits = tokio::runtime::Runtime::new()?.block_on(
-        transformer.prefill(&input, &block_table)
-    )?;
+    let logits = tokio::runtime::Runtime::new()?
+        .block_on(transformer.forward_with_cache(&prefill_input, &mut cache))?;
     let prefill_time = prefill_start.elapsed();
+    println!(
+        "Prefill {} tokens: {:.2}ms",
+        prompt_tokens.len(),
+        prefill_time.as_secs_f64() * 1000.0
+    );
 
-    println!("Prefill time: {:.2}ms", prefill_time.as_secs_f64() * 1000.0);
-    println!("Output shape: {:?}", logits.dims());
-
-    // Sample next token
+    // Get first generated token
     let next_token = transformer.sample(&logits, 0.0)?;
-    println!("Next token (greedy): {}", next_token);
+    println!("First generated token: {}", next_token);
+    println!("Cache size after prefill: {} tokens", cache.seq_len());
 
-    // Generate a few more tokens
-    println!("\nGenerating tokens...");
-    let mut generated = prompt_tokens.clone();
-    generated.push(next_token);
+    // Benchmark decode steps
+    println!("\nDecode timing (with KV cache):");
+    let mut decode_times = Vec::new();
+    let mut current_token = next_token;
 
-    for i in 0..10 {
-        let last_token = *generated.last().unwrap();
-        let input = candle_core::Tensor::from_slice(&[last_token], (1, 1), &device)?;
-
+    for i in 0..5 {
+        let input = candle_core::Tensor::from_slice(&[current_token], (1, 1), &device)?;
         let decode_start = Instant::now();
-        let logits = tokio::runtime::Runtime::new()?.block_on(
-            transformer.decode(&input, &block_table, generated.len() - 1)
-        )?;
+        let logits = tokio::runtime::Runtime::new()?
+            .block_on(transformer.forward_with_cache(&input, &mut cache))?;
         let decode_time = decode_start.elapsed();
+        decode_times.push(decode_time.as_secs_f64() * 1000.0);
 
-        let next = transformer.sample(&logits, 0.7)?;
-        generated.push(next);
-
-        println!("  Token {}: {} ({:.2}ms)", i + 1, next, decode_time.as_secs_f64() * 1000.0);
+        current_token = transformer.sample(&logits, 0.0)?;
+        println!(
+            "  Step {}: token {} in {:.2}ms (cache: {} tokens)",
+            i + 1,
+            current_token,
+            decode_time.as_secs_f64() * 1000.0,
+            cache.seq_len()
+        );
     }
 
-    println!("\nGenerated sequence: {:?}", generated);
-    println!("\nGPU inference complete!");
+    let avg_decode: f64 = decode_times.iter().sum::<f64>() / decode_times.len() as f64;
+    println!("\nAverage decode time: {:.2}ms", avg_decode);
+    println!("Final cache size: {} tokens", cache.seq_len());
+
+    println!("\nGPU inference with KV cache complete!");
 
     Ok(())
 }

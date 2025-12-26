@@ -7,7 +7,8 @@
 //! - Language model head
 
 use super::{
-    create_causal_mask, ModelConfig, RmsNorm, RotaryEmbedding, TransformerLayer, WeightLoader,
+    create_causal_mask, KvCache, ModelConfig, RmsNorm, RotaryEmbedding, TransformerLayer,
+    WeightLoader,
 };
 use crate::attention::{AttentionBackend, AttentionConfig};
 use crate::cache::BlockTable;
@@ -385,6 +386,274 @@ impl Transformer {
             let token = probs.argmax(0)?.to_scalar::<u32>()?;
             Ok(token)
         }
+    }
+
+    /// Create a new KV cache for this model.
+    pub fn create_cache(&self) -> KvCache {
+        KvCache::new(self.config.num_hidden_layers, self.device.clone())
+    }
+
+    /// Forward pass with KV cache for autoregressive generation.
+    ///
+    /// This method properly maintains KV cache across calls:
+    /// - First call (cache empty): processes all tokens, stores KV
+    /// - Subsequent calls: uses cached KV, processes only new tokens
+    ///
+    /// # Arguments
+    ///
+    /// * `input_ids` - Input token IDs [batch, seq_len]
+    /// * `cache` - KV cache to use and update
+    ///
+    /// # Returns
+    ///
+    /// Logits [batch, seq_len, vocab_size]
+    pub async fn forward_with_cache(
+        &self,
+        input_ids: &Tensor,
+        cache: &mut KvCache,
+    ) -> Result<Tensor> {
+        if !self.weights_loaded {
+            return Err(DendriteError::ModelError("Weights not loaded".into()));
+        }
+
+        let embed_tokens = self
+            .embed_tokens
+            .as_ref()
+            .ok_or_else(|| DendriteError::ModelError("No embedding weights".into()))?;
+        let lm_head = self
+            .lm_head
+            .as_ref()
+            .ok_or_else(|| DendriteError::ModelError("No lm_head weights".into()))?;
+
+        let seq_len = input_ids.dims()[1];
+        let cached_len = cache.seq_len();
+        let total_len = cached_len + seq_len;
+
+        // 1. Embed tokens
+        let hidden_states = self.embed_lookup(input_ids, embed_tokens)?;
+
+        // 2. Create causal mask for the new tokens attending to all (cached + new)
+        let mask = if seq_len > 1 {
+            // Prefill: create mask for seq_len tokens
+            Some(create_causal_mask(total_len, &self.device)?)
+        } else {
+            // Decode: single token can attend to all cached + itself, no mask needed
+            None
+        };
+
+        // 3. Process through layers with cache
+        let mut hidden_states = hidden_states;
+        for (layer_idx, layer) in self.layers.iter().enumerate() {
+            let layer_cache = cache.layer_mut(layer_idx);
+            hidden_states =
+                layer.forward_with_cache(&hidden_states, &self.rope, layer_cache, mask.as_ref())?;
+        }
+
+        // 4. Final norm
+        let hidden_states = self.norm.forward(&hidden_states)?;
+
+        // 5. LM head
+        let logits = self.lm_head_forward(&hidden_states, lm_head)?;
+
+        Ok(logits)
+    }
+
+    /// Generate tokens autoregressively.
+    ///
+    /// # Arguments
+    ///
+    /// * `prompt` - Initial token IDs
+    /// * `max_tokens` - Maximum tokens to generate
+    /// * `temperature` - Sampling temperature (0.0 for greedy)
+    ///
+    /// # Returns
+    ///
+    /// Generated token sequence including prompt
+    pub async fn generate(
+        &self,
+        prompt: &[u32],
+        max_tokens: usize,
+        temperature: f32,
+    ) -> Result<Vec<u32>> {
+        self.generate_with_stop(prompt, max_tokens, temperature, None).await
+    }
+
+    /// Generate tokens with stop condition.
+    ///
+    /// # Arguments
+    ///
+    /// * `prompt` - Initial token IDs
+    /// * `max_tokens` - Maximum tokens to generate
+    /// * `temperature` - Sampling temperature (0.0 for greedy)
+    /// * `stop_token` - Optional token ID that stops generation
+    ///
+    /// # Returns
+    ///
+    /// Generated token sequence including prompt
+    pub async fn generate_with_stop(
+        &self,
+        prompt: &[u32],
+        max_tokens: usize,
+        temperature: f32,
+        stop_token: Option<u32>,
+    ) -> Result<Vec<u32>> {
+        let mut cache = self.create_cache();
+        let mut generated = prompt.to_vec();
+
+        // Prefill: process all prompt tokens at once
+        let input = Tensor::from_slice(prompt, (1, prompt.len()), &self.device)?;
+        let logits = self.forward_with_cache(&input, &mut cache).await?;
+        let next_token = self.sample(&logits, temperature)?;
+
+        if Some(next_token) == stop_token {
+            return Ok(generated);
+        }
+        generated.push(next_token);
+
+        // Decode: generate one token at a time
+        for _ in 1..max_tokens {
+            let last_token = *generated.last().unwrap();
+            let input = Tensor::from_slice(&[last_token], (1, 1), &self.device)?;
+            let logits = self.forward_with_cache(&input, &mut cache).await?;
+            let next_token = self.sample(&logits, temperature)?;
+
+            if Some(next_token) == stop_token {
+                break;
+            }
+            generated.push(next_token);
+        }
+
+        Ok(generated)
+    }
+
+    /// Generate text from a text prompt.
+    ///
+    /// # Arguments
+    ///
+    /// * `tokenizer` - Tokenizer to use for encoding/decoding
+    /// * `prompt` - Text prompt
+    /// * `max_tokens` - Maximum tokens to generate
+    /// * `temperature` - Sampling temperature (0.0 for greedy)
+    ///
+    /// # Returns
+    ///
+    /// Generated text (including prompt)
+    pub async fn generate_text(
+        &self,
+        tokenizer: &super::Tokenizer,
+        prompt: &str,
+        max_tokens: usize,
+        temperature: f32,
+    ) -> Result<String> {
+        // Encode prompt with BOS token
+        let prompt_tokens = tokenizer.encode(prompt, true)?;
+
+        // Generate with EOS as stop token
+        let generated = self
+            .generate_with_stop(&prompt_tokens, max_tokens, temperature, tokenizer.eos_token_id())
+            .await?;
+
+        // Decode back to text
+        tokenizer.decode(&generated, false)
+    }
+
+    /// Generate continuation from a text prompt.
+    ///
+    /// Returns only the generated text, not the prompt.
+    ///
+    /// # Arguments
+    ///
+    /// * `tokenizer` - Tokenizer to use for encoding/decoding
+    /// * `prompt` - Text prompt
+    /// * `max_tokens` - Maximum tokens to generate
+    /// * `temperature` - Sampling temperature (0.0 for greedy)
+    ///
+    /// # Returns
+    ///
+    /// Generated text (continuation only)
+    pub async fn generate_continuation(
+        &self,
+        tokenizer: &super::Tokenizer,
+        prompt: &str,
+        max_tokens: usize,
+        temperature: f32,
+    ) -> Result<String> {
+        // Encode prompt with BOS token
+        let prompt_tokens = tokenizer.encode(prompt, true)?;
+        let prompt_len = prompt_tokens.len();
+
+        // Generate with EOS as stop token
+        let generated = self
+            .generate_with_stop(&prompt_tokens, max_tokens, temperature, tokenizer.eos_token_id())
+            .await?;
+
+        // Decode only the new tokens
+        if generated.len() > prompt_len {
+            tokenizer.decode(&generated[prompt_len..], true)
+        } else {
+            Ok(String::new())
+        }
+    }
+
+    /// Stream tokens during generation.
+    ///
+    /// Calls the callback for each generated token.
+    ///
+    /// # Arguments
+    ///
+    /// * `prompt` - Initial token IDs
+    /// * `max_tokens` - Maximum tokens to generate
+    /// * `temperature` - Sampling temperature (0.0 for greedy)
+    /// * `stop_token` - Optional token ID that stops generation
+    /// * `callback` - Called with each new token
+    ///
+    /// # Returns
+    ///
+    /// Generated token sequence including prompt
+    pub async fn generate_streaming<F>(
+        &self,
+        prompt: &[u32],
+        max_tokens: usize,
+        temperature: f32,
+        stop_token: Option<u32>,
+        mut callback: F,
+    ) -> Result<Vec<u32>>
+    where
+        F: FnMut(u32) -> bool,
+    {
+        let mut cache = self.create_cache();
+        let mut generated = prompt.to_vec();
+
+        // Prefill: process all prompt tokens at once
+        let input = Tensor::from_slice(prompt, (1, prompt.len()), &self.device)?;
+        let logits = self.forward_with_cache(&input, &mut cache).await?;
+        let next_token = self.sample(&logits, temperature)?;
+
+        if Some(next_token) == stop_token {
+            return Ok(generated);
+        }
+        generated.push(next_token);
+        if !callback(next_token) {
+            return Ok(generated);
+        }
+
+        // Decode: generate one token at a time
+        for _ in 1..max_tokens {
+            let last_token = *generated.last().unwrap();
+            let input = Tensor::from_slice(&[last_token], (1, 1), &self.device)?;
+            let logits = self.forward_with_cache(&input, &mut cache).await?;
+            let next_token = self.sample(&logits, temperature)?;
+
+            if Some(next_token) == stop_token {
+                break;
+            }
+            generated.push(next_token);
+            if !callback(next_token) {
+                break;
+            }
+        }
+
+        Ok(generated)
     }
 }
 
