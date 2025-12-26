@@ -206,7 +206,7 @@
 | Metric | Target | Measured | Status |
 |--------|--------|----------|--------|
 | Fork latency | < 50 μs | **~500ns** | ✅ EXCEEDED |
-| Grammar mask | < 50 μs | Pending | 🔄 |
+| Grammar mask | < 50 μs | **~1.6μs** | ✅ EXCEEDED |
 | Decode latency | < 10 ms | **10ms** (GB10) | ✅ MET |
 | Memory overhead per fork | < 5% | **~0.1%** (CoW) | ✅ EXCEEDED |
 | Cache utilization | > 80% | Pending | 🔄 |
