@@ -28,9 +28,10 @@ Dendrite is a specialized LLM inference engine designed for agentic workloads th
 | Beam Search | ✅ Complete | Top-k beams |
 | Grammar Constraints | ✅ Complete | llguidance integration |
 | GPU Inference | ✅ Complete | candle-flash-attn |
+| FP8 Quantization | 🔄 In Progress | E4M3/E5M2/MXFP8 |
 | FlashInfer FFI | 🔄 In Progress | Paged attention kernels |
 
-**266 tests passing** | Verified with TinyLlama-1.1B on NVIDIA GB10 (DGX Spark)
+**266 tests passing** | **40.8 tok/s** on NVIDIA GB10 (DGX Spark) with TinyLlama-1.1B
 
 ## Architecture
 

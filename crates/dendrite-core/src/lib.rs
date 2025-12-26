@@ -112,6 +112,7 @@ pub mod cache;
 pub mod error;
 pub mod grammar;
 pub mod model;
+pub mod quantization;
 pub mod scheduler;
 pub mod search;
 pub mod tree;
