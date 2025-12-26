@@ -46,7 +46,7 @@ candle-nn = { git = "https://github.com/huggingface/candle" }
 candle-transformers = { git = "https://github.com/huggingface/candle" }
 
 # CUDA bindings
-cudarc = { version = "0.12", features = ["driver"] }
+cudarc = { version = "0.18", features = ["driver", "cuda-version-from-build-system"] }
 
 # Tokenizer
 tokenizers = "0.21"
