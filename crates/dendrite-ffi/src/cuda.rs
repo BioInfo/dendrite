@@ -3,12 +3,12 @@
 use crate::error::{FfiError, Result};
 
 #[cfg(feature = "cuda")]
-use cudarc::driver::{CudaDevice, CudaStream};
+use cudarc::driver::{CudaContext, CudaStream};
 
 /// Check if CUDA is available.
 #[cfg(feature = "cuda")]
 pub fn is_available() -> bool {
-    CudaDevice::new(0).is_ok()
+    CudaContext::new(0).is_ok()
 }
 
 #[cfg(not(feature = "cuda"))]
@@ -21,7 +21,7 @@ pub fn is_available() -> bool {
 pub fn device_count() -> Result<usize> {
     cudarc::driver::result::device::get_count()
         .map(|c| c as usize)
-        .map_err(|e| FfiError::CudaError(e.to_string()))
+        .map_err(|e: cudarc::driver::DriverError| FfiError::CudaError(e.to_string()))
 }
 
 #[cfg(not(feature = "cuda"))]
@@ -32,27 +32,35 @@ pub fn device_count() -> Result<usize> {
 /// CUDA device wrapper.
 #[cfg(feature = "cuda")]
 pub struct Device {
-    device: std::sync::Arc<CudaDevice>,
+    ctx: std::sync::Arc<CudaContext>,
+    ordinal: usize,
 }
 
 #[cfg(feature = "cuda")]
 impl Device {
     /// Create a new CUDA device handle.
     pub fn new(ordinal: usize) -> Result<Self> {
-        let device = CudaDevice::new(ordinal).map_err(|e| FfiError::CudaError(e.to_string()))?;
-        Ok(Self { device })
+        let ctx = CudaContext::new(ordinal)
+            .map_err(|e: cudarc::driver::DriverError| FfiError::CudaError(e.to_string()))?;
+        Ok(Self { ctx, ordinal })
     }
 
     /// Get device ordinal.
     pub fn ordinal(&self) -> usize {
-        self.device.ordinal()
+        self.ordinal
     }
 
     /// Synchronize device.
     pub fn synchronize(&self) -> Result<()> {
-        self.device
+        self.ctx
+            .default_stream()
             .synchronize()
-            .map_err(|e| FfiError::CudaError(e.to_string()))
+            .map_err(|e: cudarc::driver::DriverError| FfiError::CudaError(e.to_string()))
+    }
+
+    /// Get the CUDA context.
+    pub fn context(&self) -> &std::sync::Arc<CudaContext> {
+        &self.ctx
     }
 
     /// Get free and total memory.
@@ -74,9 +82,9 @@ impl Stream {
     /// Create a new CUDA stream.
     pub fn new(device: &Device) -> Result<Self> {
         let stream = device
-            .device
-            .fork_default_stream()
-            .map_err(|e| FfiError::CudaError(e.to_string()))?;
+            .ctx
+            .new_stream()
+            .map_err(|e: cudarc::driver::DriverError| FfiError::CudaError(e.to_string()))?;
         Ok(Self { stream })
     }
 
@@ -84,6 +92,6 @@ impl Stream {
     pub fn synchronize(&self) -> Result<()> {
         self.stream
             .synchronize()
-            .map_err(|e| FfiError::CudaError(e.to_string()))
+            .map_err(|e: cudarc::driver::DriverError| FfiError::CudaError(e.to_string()))
     }
 }
