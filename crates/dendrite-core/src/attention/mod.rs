@@ -1,8 +1,9 @@
 //! Attention computation backends.
 //!
 //! Provides abstractions over different attention implementations:
-//! - FlashInfer (production)
-//! - Reference implementation (testing)
+//! - [`FlashAttnBackend`] - GPU-accelerated via candle-flash-attn
+//! - [`FlashInferBackend`] - Paged attention via FlashInfer (requires FFI)
+//! - [`ReferenceBackend`] - CPU reference implementation for testing
 
 mod backend;
 mod paged;
@@ -14,4 +15,4 @@ pub use paged::PagedAttention;
 mod flashinfer;
 
 #[cfg(feature = "cuda")]
-pub use flashinfer::FlashInferBackend;
+pub use flashinfer::{FlashAttnBackend, FlashInferBackend};
