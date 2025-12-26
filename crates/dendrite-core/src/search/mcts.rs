@@ -185,6 +185,7 @@ impl MctsSearch {
     }
 
     /// Get mutable node by index.
+    #[allow(dead_code)]
     fn get_node_mut(&mut self, idx: usize) -> Option<&mut MctsNode> {
         self.nodes.get_mut(idx)
     }

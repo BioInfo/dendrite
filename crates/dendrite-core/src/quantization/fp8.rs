@@ -23,7 +23,7 @@
 //! | B100 | ✅ | ✅ | ✅ |
 
 use crate::error::Result;
-use candle_core::{DType, Tensor};
+use candle_core::Tensor;
 
 /// FP8 format specification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,7 +102,7 @@ impl QuantizedTensor {
     /// Quantized tensor with scale factors
     pub fn quantize(tensor: &Tensor, config: &Fp8Config) -> Result<Self> {
         let shape = tensor.dims().to_vec();
-        let device = tensor.device();
+        let _device = tensor.device(); // Reserved for future GPU transfer
 
         // Compute scale factors
         let abs_max = if config.per_channel {
@@ -174,6 +174,7 @@ impl QuantizedTensor {
 /// 1. Iterate over all weight tensors
 /// 2. Quantize each to FP8 with appropriate config
 /// 3. Update the model to use quantized compute
+#[allow(dead_code)]
 pub fn quantize_weights(_weights: &[Tensor], _config: &Fp8Config) -> Result<Vec<QuantizedTensor>> {
     // TODO: Implement full weight quantization
     todo!("FP8 weight quantization not yet implemented")

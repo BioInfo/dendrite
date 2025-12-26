@@ -161,6 +161,7 @@ impl Scorer for GreedyScorer {
 ///
 /// With probability epsilon, selects randomly. Otherwise, selects greedily.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct EpsilonGreedyScorer {
     /// Probability of random selection.
     pub epsilon: f64,
@@ -168,6 +169,7 @@ pub struct EpsilonGreedyScorer {
     pub random: f64,
 }
 
+#[allow(dead_code)]
 impl EpsilonGreedyScorer {
     /// Create with epsilon value.
     pub fn new(epsilon: f64) -> Self {
