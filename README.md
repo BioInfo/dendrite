@@ -4,6 +4,22 @@
 
 Dendrite is a specialized LLM inference engine designed for agentic workloads that require exploring multiple reasoning paths simultaneously. Unlike traditional inference engines that optimize for single-sequence throughput, Dendrite provides constant-time forking of inference state, enabling efficient tree-of-thought, MCTS, and beam search algorithms.
 
+## Why Dendrite? (vs vLLM/SGLang)
+
+**TL;DR:** If your agent explores multiple reasoning paths, Dendrite is 1000-10000x faster at branching.
+
+| Scenario | vLLM | SGLang | Dendrite |
+|----------|------|--------|----------|
+| Fork 4K context | 50-100ms | 5-10ms | **3μs** |
+| 6-branch exploration | 300-600ms | 30-60ms | **18μs** |
+| MCTS (500 forks) | 25-50s | 2.5-5s | **1.5ms** |
+| Memory (6 branches, 4K prefix) | 6GB | ~2GB | **1.1GB** |
+
+**Use Dendrite for:** Tree-of-Thought, MCTS, Beam Search, Speculative Decoding, Multi-Agent
+**Use vLLM for:** Single-sequence generation, simple chat (higher throughput)
+
+See [BENCHMARKS.md](BENCHMARKS.md) and [PRACTICAL_IMPACT.md](PRACTICAL_IMPACT.md) for details.
+
 ## Key Features
 
 - **O(1) Fork Latency**: Create reasoning branches without copying the KV cache using copy-on-write semantics
