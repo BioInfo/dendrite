@@ -74,7 +74,7 @@ impl Device {
 /// CUDA stream wrapper.
 #[cfg(feature = "cuda")]
 pub struct Stream {
-    stream: CudaStream,
+    stream: std::sync::Arc<CudaStream>,
 }
 
 #[cfg(feature = "cuda")]
