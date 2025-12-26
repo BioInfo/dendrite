@@ -7,6 +7,7 @@
 //! - **PagedAttention** implementation with block tables
 //! - **FlashInfer** kernel integration for efficient attention
 //! - **Scheduler** for batched prefill/decode operations
+//! - **Tree search algorithms** (MCTS, Beam Search) with UCT scoring
 //! - **Grammar-constrained decoding** via llguidance
 //!
 //! ## Core Concepts
@@ -100,6 +101,7 @@
 //! - [`attention`] - Attention backend trait and implementations
 //! - [`grammar`] - Grammar constraints for structured output
 //! - [`model`] - Transformer model definitions
+//! - [`search`] - Tree search algorithms (MCTS, Beam Search)
 //! - [`error`] - Error types and Result alias
 
 #![warn(missing_docs)]
@@ -111,6 +113,7 @@ pub mod error;
 pub mod grammar;
 pub mod model;
 pub mod scheduler;
+pub mod search;
 pub mod tree;
 
 pub use error::{DendriteError, Result};
@@ -118,8 +121,12 @@ pub use error::{DendriteError, Result};
 /// Re-export commonly used types
 pub mod prelude {
     pub use crate::attention::AttentionBackend;
-    pub use crate::cache::{Block, BlockTable, KvCache};
+    pub use crate::cache::{Block, BlockTable, KvCache, RadixTree};
     pub use crate::error::{DendriteError, Result};
     pub use crate::scheduler::{BatchConfig, Request, Scheduler};
+    pub use crate::search::{
+        BeamConfig, BeamSearch, MctsConfig, MctsSearch, Scorer, UctScorer,
+        TreeMcts, TreeBeam, TreeSearchContext,
+    };
     pub use crate::tree::{ForkHandle, TreeNode, TreeState};
 }

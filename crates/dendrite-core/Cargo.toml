@@ -31,6 +31,9 @@ tracing = { workspace = true }
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+safetensors = { workspace = true }
+bytemuck = { workspace = true }
+half = { workspace = true }
 
 # ML Framework
 candle-core = { workspace = true }
@@ -43,6 +46,9 @@ cudarc = { workspace = true, optional = true }
 # Tokenizer
 tokenizers = { workspace = true }
 
+# Constrained decoding
+llguidance = { workspace = true }
+
 # FFI crate
 dendrite-ffi = { workspace = true }
 
@@ -51,17 +57,17 @@ criterion = { workspace = true }
 proptest = { workspace = true }
 rstest = { workspace = true }
 tokio = { workspace = true, features = ["test-util", "macros"] }
+rand = "0.8"
 
 # Benchmarks
 [[bench]]
 name = "fork"
 harness = false
 
-# Future benchmarks
-# [[bench]]
-# name = "tree_search"
-# harness = false
-#
-# [[bench]]
-# name = "memory"
-# harness = false
+[[bench]]
+name = "tree_vs_linear"
+harness = false
+
+[[bench]]
+name = "grammar"
+harness = false

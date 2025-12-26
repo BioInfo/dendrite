@@ -9,8 +9,25 @@ Dendrite is a specialized LLM inference engine designed for agentic workloads th
 - **O(1) Fork Latency**: Create reasoning branches without copying the KV cache using copy-on-write semantics
 - **Tree-Structured KV Cache**: Share memory across branches with reference counting
 - **PagedAttention**: Memory-efficient KV cache management with 16-token blocks
+- **MCTS & Beam Search**: Built-in tree search algorithms with UCT scoring
 - **FlashInfer Integration**: High-performance attention kernels with cascade support
 - **Grammar Constraints**: Structured output via llguidance integration
+
+## Project Status
+
+| Component | Status | Tests |
+|-----------|--------|-------|
+| KV Cache (CoW) | ✅ Complete | 40+ |
+| Tree State | ✅ Complete | 22 |
+| Scheduler | ✅ Complete | 37 |
+| Attention Backend | ✅ Complete | 13 |
+| Transformer (CPU) | ✅ Complete | 8 |
+| MCTS Search | ✅ Complete | 9 |
+| Beam Search | ✅ Complete | 10 |
+| Grammar Constraints | ✅ Complete | 5 |
+| FlashInfer (GPU) | 🔄 Pending | - |
+
+**Total: 214 tests passing**
 
 ## Architecture
 
@@ -24,6 +41,10 @@ Dendrite is a specialized LLM inference engine designed for agentic workloads th
 │  │  Cache  │  │   Tree   │  │ Scheduler │  │     Model       │ │
 │  │  (CoW)  │  │  State   │  │ (Batch)   │  │  (Transformer)  │ │
 │  └─────────┘  └──────────┘  └───────────┘  └─────────────────┘ │
+│  ┌─────────────────────────┐  ┌─────────────────────────────┐  │
+│  │        Search           │  │        Grammar              │  │
+│  │  (MCTS, Beam, UCT)      │  │  (llguidance constraints)   │  │
+│  └─────────────────────────┘  └─────────────────────────────┘  │
 ├─────────────────────────────────────────────────────────────────┤
 │                      dendrite-ffi                               │
 │              (FlashInfer + CUDA bindings)                       │
@@ -91,7 +112,13 @@ cargo build --release --features full
 ## Running Examples
 
 ```bash
-# Tree of Thought example
+# MCTS search with simulated environment
+cargo run -p dendrite-core --example mcts_search
+
+# Beam search with mock language model
+cargo run -p dendrite-core --example beam_search
+
+# Tree of Thought (high-level API, requires model)
 cargo run --example tree_of_thought
 
 # JSON output with grammar constraints

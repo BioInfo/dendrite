@@ -48,10 +48,12 @@
 mod block;
 mod block_table;
 mod pool;
+mod radix;
 
 pub use block::{Block, BlockId};
 pub use block_table::BlockTable;
 pub use pool::BlockPool;
+pub use radix::{RadixTree, RadixTreeStats};
 
 /// Number of tokens per KV cache block.
 pub const TOKENS_PER_BLOCK: usize = 16;
