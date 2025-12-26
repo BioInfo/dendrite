@@ -152,11 +152,61 @@ impl Transformer {
         let norm_weight = loader.get_tensor("model.norm.weight")?;
         self.norm = RmsNorm::new(norm_weight, self.config.rms_norm_eps)?;
 
-        // TODO: Load layer weights
-        // For now, keep placeholder layers
+        // Load layer weights
+        self.layers.clear();
+        for i in 0..self.config.num_hidden_layers {
+            let layer = self.load_layer(&loader, i)?;
+            self.layers.push(layer);
+        }
 
         self.weights_loaded = true;
         Ok(())
+    }
+
+    /// Load a single transformer layer.
+    fn load_layer(&self, loader: &WeightLoader, layer_idx: usize) -> Result<TransformerLayer> {
+        let prefix = format!("model.layers.{}", layer_idx);
+
+        // Load attention weights
+        let q_proj = loader.get_tensor(&format!("{}.self_attn.q_proj.weight", prefix))?;
+        let k_proj = loader.get_tensor(&format!("{}.self_attn.k_proj.weight", prefix))?;
+        let v_proj = loader.get_tensor(&format!("{}.self_attn.v_proj.weight", prefix))?;
+        let o_proj = loader.get_tensor(&format!("{}.self_attn.o_proj.weight", prefix))?;
+
+        let attention = super::Attention::new(
+            q_proj,
+            k_proj,
+            v_proj,
+            o_proj,
+            self.config.num_attention_heads,
+            self.config.num_key_value_heads,
+            self.config.head_dim(),
+        )?;
+
+        // Load MLP weights
+        let gate_proj = loader.get_tensor(&format!("{}.mlp.gate_proj.weight", prefix))?;
+        let up_proj = loader.get_tensor(&format!("{}.mlp.up_proj.weight", prefix))?;
+        let down_proj = loader.get_tensor(&format!("{}.mlp.down_proj.weight", prefix))?;
+
+        let mlp = super::SwiGluMlp::new(gate_proj, up_proj, down_proj)?;
+
+        // Load layer norms
+        let input_norm_weight =
+            loader.get_tensor(&format!("{}.input_layernorm.weight", prefix))?;
+        let input_layernorm = RmsNorm::new(input_norm_weight, self.config.rms_norm_eps)?;
+
+        let post_attn_norm_weight =
+            loader.get_tensor(&format!("{}.post_attention_layernorm.weight", prefix))?;
+        let post_attention_layernorm =
+            RmsNorm::new(post_attn_norm_weight, self.config.rms_norm_eps)?;
+
+        Ok(TransformerLayer::new(
+            input_layernorm,
+            attention,
+            post_attention_layernorm,
+            mlp,
+            layer_idx,
+        ))
     }
 
     /// Get model configuration.
