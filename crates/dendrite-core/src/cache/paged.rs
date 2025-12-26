@@ -268,7 +268,7 @@ impl PagePool {
         let page = Arc::new(RwLock::new(page));
 
         let mut pages = self.pages.write();
-        let idx = pages.len();
+        let _idx = pages.len(); // Reserved for future page index tracking
         pages.push(page.clone());
 
         Ok(page)

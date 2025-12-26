@@ -47,7 +47,7 @@ See [BENCHMARKS.md](BENCHMARKS.md) and [PRACTICAL_IMPACT.md](PRACTICAL_IMPACT.md
 | FP8 Quantization | 🔄 In Progress | E4M3/E5M2/MXFP8 |
 | FlashInfer FFI | 🔄 In Progress | Paged attention kernels |
 
-**266 tests passing** | **40.8 tok/s** on NVIDIA GB10 (DGX Spark) with TinyLlama-1.1B
+**272 tests passing** | **40.8 tok/s** on NVIDIA GB10 (DGX Spark) with TinyLlama-1.1B
 
 ## Architecture
 

@@ -48,6 +48,7 @@ impl RadixNode {
         }
     }
 
+    #[allow(dead_code)]
     fn with_block(block_idx: usize) -> Self {
         Self {
             children: HashMap::new(),
