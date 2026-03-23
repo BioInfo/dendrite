@@ -27,9 +27,11 @@
 
 mod constraint;
 mod mask;
+pub mod tokenizer_bridge;
 
 pub use constraint::{
     to_llguidance, Grammar, GrammarConstraint, LlgConstraint, ParserFactory, ParserLimits,
     TokenParser, TopLevelGrammar,
 };
 pub use mask::TokenMask;
+pub use tokenizer_bridge::{apply_llg_mask, build_tok_env};
