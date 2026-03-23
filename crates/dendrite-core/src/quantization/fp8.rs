@@ -167,17 +167,32 @@ impl QuantizedTensor {
     }
 }
 
-/// Quantize a model's weights to FP8.
+/// Quantize a collection of weight tensors to FP8.
 ///
-/// This is a placeholder for full model quantization.
-/// In production, this would:
-/// 1. Iterate over all weight tensors
-/// 2. Quantize each to FP8 with appropriate config
-/// 3. Update the model to use quantized compute
-#[allow(dead_code)]
-pub fn quantize_weights(_weights: &[Tensor], _config: &Fp8Config) -> Result<Vec<QuantizedTensor>> {
-    // TODO: Implement full weight quantization
-    todo!("FP8 weight quantization not yet implemented")
+/// Iterates over all weight tensors and quantizes each using the provided
+/// configuration. Weights use E4M3 format by default (better precision for
+/// weights vs activations).
+///
+/// # Arguments
+/// * `weights` - Slice of tensors to quantize (typically model weight matrices)
+/// * `config` - FP8 quantization configuration (format, per-channel, axis)
+///
+/// # Returns
+/// Vector of `QuantizedTensor` in the same order as input weights.
+///
+/// # Example
+/// ```rust,ignore
+/// use dendrite_core::quantization::fp8::{Fp8Config, Fp8Format, quantize_weights};
+///
+/// let config = Fp8Config { format: Fp8Format::E4M3, per_channel: true, scale_axis: 0 };
+/// let quantized = quantize_weights(&weight_tensors, &config)?;
+/// println!("Compression: {:.2}x", quantized[0].compression_ratio());
+/// ```
+pub fn quantize_weights(weights: &[Tensor], config: &Fp8Config) -> Result<Vec<QuantizedTensor>> {
+    weights
+        .iter()
+        .map(|w| QuantizedTensor::quantize(w, config))
+        .collect()
 }
 
 #[cfg(test)]
@@ -210,6 +225,38 @@ mod tests {
         // Dequantize and check shape
         let dequantized = quantized.dequantize().unwrap();
         assert_eq!(dequantized.dims(), &[16, 64]);
+    }
+
+    #[test]
+    fn quantize_weights_batch() {
+        let device = Device::Cpu;
+        let config = Fp8Config {
+            format: Fp8Format::E4M3,
+            per_channel: false,
+            scale_axis: 0,
+        };
+
+        // Simulate 3 weight tensors (e.g., Q, K, V projections)
+        let weights: Vec<Tensor> = (0..3)
+            .map(|_| Tensor::randn(0.0f32, 1.0, (64, 64), &device).unwrap())
+            .collect();
+
+        let quantized = super::quantize_weights(&weights, &config).unwrap();
+        assert_eq!(quantized.len(), 3);
+
+        for q in &quantized {
+            assert_eq!(q.shape, vec![64, 64]);
+            assert_eq!(q.format, Fp8Format::E4M3);
+            // Each should be close to 2x compression
+            assert!(q.compression_ratio() > 1.5);
+        }
+    }
+
+    #[test]
+    fn quantize_weights_empty() {
+        let config = Fp8Config::default();
+        let result = super::quantize_weights(&[], &config).unwrap();
+        assert!(result.is_empty());
     }
 
     #[test]
