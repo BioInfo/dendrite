@@ -47,12 +47,18 @@
 
 mod block;
 mod block_table;
+pub mod compress;
 mod paged;
 mod pool;
 mod radix;
 
 pub use block::{Block, BlockId};
 pub use block_table::BlockTable;
+pub use compress::{
+    CompressionScheme, CompressedVec, IdentityCompressor, KvCompressor,
+    PolarQuantCompressor, QjlCompressor, TurboQuantCompressor,
+    compression_ratio_vs_fp16, relative_l2_error,
+};
 pub use paged::{Page, PageId, PagePool, PageTable, PagedKvCache, DEFAULT_PAGE_SIZE};
 pub use pool::{BlockPool, PoolStats};
 pub use radix::{RadixTree, RadixTreeStats};
