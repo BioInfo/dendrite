@@ -152,7 +152,7 @@
 
 - [x] Continuous batching optimization (ContinuousBatcher — mixed decode+prefill per step)
 - [ ] Memory pool tuning
-- [ ] Benchmark suite (fork, decode, prefill)
+- [x] Benchmark suite (fork, decode, prefill — criterion; scheduler.rs added)
 - [ ] Profiling and hotspot elimination
 - [ ] Documentation polish
 - [ ] Example gallery

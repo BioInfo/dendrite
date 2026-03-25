@@ -159,10 +159,11 @@ mod tests {
 
     #[test]
     fn new_cache_has_all_blocks_free() {
-        let cache = create_test_cache(100);
-        assert_eq!(cache.free_blocks(), 100);
+        // Use a small pool (< 64) so no headroom is reserved.
+        let cache = create_test_cache(32);
+        assert_eq!(cache.free_blocks(), 32);
         assert_eq!(cache.used_blocks(), 0);
-        assert_eq!(cache.total_blocks(), 100);
+        assert_eq!(cache.total_blocks(), 32);
     }
 
     #[test]
