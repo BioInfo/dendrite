@@ -31,7 +31,7 @@ mod transformer;
 pub use config::ModelConfig;
 pub use fp8_layer::{Fp8Attention, Fp8SwiGluMlp};
 pub use golden::{GoldenCase, GoldenResult, GoldenSummary, GoldenTestHarness, GoldenTestable};
-pub use kv_cache::{KvCache, LayerCache};
+pub use kv_cache::{CompressedKvCache, CompressedLayerCache, KvCache, LayerCache};
 pub use layer::{create_causal_mask, Attention, TransformerLayer};
 pub use loader::{map_hf_name, WeightLoader};
 pub use mlp::SwiGluMlp;
