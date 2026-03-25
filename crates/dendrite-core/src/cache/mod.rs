@@ -50,6 +50,7 @@ mod block_table;
 pub mod compress;
 mod paged;
 mod pool;
+mod prefix_cache;
 mod radix;
 
 pub use block::{Block, BlockId};
@@ -61,6 +62,7 @@ pub use compress::{
 };
 pub use paged::{Page, PageId, PagePool, PageTable, PagedKvCache, DEFAULT_PAGE_SIZE};
 pub use pool::{BlockPool, PoolStats};
+pub use prefix_cache::{PrefixCache, PrefixCacheStats, PrefixHit};
 pub use radix::{RadixTree, RadixTreeStats};
 
 /// Number of tokens per KV cache block.
