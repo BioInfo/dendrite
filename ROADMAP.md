@@ -151,7 +151,7 @@
 **Goal:** Production-ready performance
 
 - [x] Continuous batching optimization (ContinuousBatcher — mixed decode+prefill per step)
-- [ ] Memory pool tuning
+- [x] Memory pool tuning (batch alloc/free, CoW headroom, watermark stats)
 - [x] Benchmark suite (fork, decode, prefill — criterion; scheduler.rs added)
 - [ ] Profiling and hotspot elimination
 - [ ] Documentation polish

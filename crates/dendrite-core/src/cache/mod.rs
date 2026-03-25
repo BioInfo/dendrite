@@ -54,7 +54,7 @@ mod radix;
 pub use block::{Block, BlockId};
 pub use block_table::BlockTable;
 pub use paged::{Page, PageId, PagePool, PageTable, PagedKvCache, DEFAULT_PAGE_SIZE};
-pub use pool::BlockPool;
+pub use pool::{BlockPool, PoolStats};
 pub use radix::{RadixTree, RadixTreeStats};
 
 /// Number of tokens per KV cache block.
@@ -139,6 +139,11 @@ impl KvCache {
     /// Get used blocks count.
     pub fn used_blocks(&self) -> usize {
         self.config.max_blocks - self.pool.free_count()
+    }
+
+    /// Fraction of pool currently in use (0.0–1.0).
+    pub fn utilization(&self) -> f32 {
+        self.pool.utilization()
     }
 }
 
