@@ -278,6 +278,14 @@ impl ContinuousBatcher {
         self.decoding.lock().retain(|r| r.id != request_id);
     }
 
+    /// Push a request directly into the decoding queue (for benchmarks / tests).
+    ///
+    /// Bypasses the waiting → prefilling → decoding lifecycle. Use only when
+    /// the caller has already completed prefill externally.
+    pub fn push_decoding(&self, request: Request) {
+        self.decoding.lock().push(request);
+    }
+
     /// Number of requests waiting for their first chunk.
     pub fn num_waiting(&self) -> usize {
         self.waiting.lock().len()

@@ -113,6 +113,11 @@ impl Scheduler {
         self.running.lock().len()
     }
 
+    /// Push a request directly into the running queue (for benchmarks / tests).
+    pub fn push_running(&self, request: Request) {
+        self.running.lock().push(request);
+    }
+
     /// Check if scheduler is idle.
     pub fn is_idle(&self) -> bool {
         self.waiting.lock().is_empty() && self.running.lock().is_empty()
