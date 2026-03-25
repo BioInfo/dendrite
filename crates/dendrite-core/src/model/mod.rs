@@ -17,6 +17,7 @@
 //! - [`WeightLoader`] - SafeTensors weight loading
 
 mod config;
+mod fp8_layer;
 mod golden;
 mod kv_cache;
 mod layer;
@@ -28,6 +29,7 @@ mod tokenizer;
 mod transformer;
 
 pub use config::ModelConfig;
+pub use fp8_layer::{Fp8Attention, Fp8SwiGluMlp};
 pub use golden::{GoldenCase, GoldenResult, GoldenSummary, GoldenTestHarness, GoldenTestable};
 pub use kv_cache::{KvCache, LayerCache};
 pub use layer::{create_causal_mask, Attention, TransformerLayer};
