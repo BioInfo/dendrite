@@ -34,14 +34,18 @@
 //! # Roadmap
 //!
 //! - [x] Module structure and configuration
-//! - [ ] FP8 E4M3/E5M2 conversion
-//! - [ ] MXFP8 with block-wise scaling
+//! - [x] FP8 E4M3/E5M2 conversion (quantize_weights)
+//! - [x] MXFP8 with block-wise scaling (mxfp8.rs, block_size=32 per OCP spec)
 //! - [ ] INT8 symmetric/asymmetric
 //! - [ ] Integration with FlashInfer FP8 kernels
 
 mod fp8;
+pub mod fp8_linear;
+mod mxfp8;
 
 pub use fp8::{Fp8Config, Fp8Format, QuantizedTensor};
+pub use fp8_linear::{quantize_attention_projs, Fp8Linear};
+pub use mxfp8::{quantize_weights_mxfp8, MxFp8Tensor, DEFAULT_BLOCK_SIZE};
 
 /// Quantization format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
