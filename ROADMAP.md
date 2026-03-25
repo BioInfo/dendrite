@@ -154,8 +154,8 @@
 - [x] Memory pool tuning (batch alloc/free, CoW headroom, watermark stats)
 - [x] Benchmark suite (fork, decode, prefill — criterion; scheduler.rs added)
 - [ ] Profiling and hotspot elimination
-- [ ] Documentation polish
-- [ ] Example gallery
+- [x] Documentation polish
+- [x] Example gallery (continuous_batching.rs, memory_pool.rs)
 
 **Exit Criteria:** Meet all performance targets from PRD
 
@@ -164,10 +164,12 @@
 ## Milestone 8: Launch (Weeks 15-16)
 **Goal:** Public release and community building
 
-- [ ] Blog post: "Why We Built Dendrite"
-- [ ] Hacker News launch
-- [ ] Twitter/X thread
+- [x] Blog post: drafted (docs/launch/blog-post.md — needs Justin sign-off)
+- [x] Hacker News launch: drafted (docs/launch/hn-post.md — needs Justin sign-off)
+- [x] Twitter/X thread: drafted (docs/launch/twitter-thread.md — needs Justin sign-off)
 - [ ] Discord community setup
+- [ ] Demo GIF (asciinema — Justin action)
+- [ ] Tag v0.1.0 release
 - [ ] Issue triage and community response
 - [ ] First external contributor PR
 
