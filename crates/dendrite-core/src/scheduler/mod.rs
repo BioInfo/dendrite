@@ -6,10 +6,12 @@
 //! - Preemption and swapping
 
 mod batch;
+mod continuous;
 mod policy;
 mod request;
 
 pub use batch::{Batch, BatchConfig};
+pub use continuous::{ContinuousBatcher, MixedStep, PrefillChunk, StepStats};
 pub use policy::SchedulingPolicy;
 pub use request::{Request, RequestId, RequestState};
 
