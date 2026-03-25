@@ -150,7 +150,7 @@
 ## Milestone 7: Performance & Polish (Weeks 13-14)
 **Goal:** Production-ready performance
 
-- [ ] Continuous batching optimization
+- [x] Continuous batching optimization (ContinuousBatcher — mixed decode+prefill per step)
 - [ ] Memory pool tuning
 - [ ] Benchmark suite (fork, decode, prefill)
 - [ ] Profiling and hotspot elimination
