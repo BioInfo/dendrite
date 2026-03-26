@@ -150,32 +150,28 @@ impl Attention {
         let x_2d = x.reshape((batch * seq_len, self.hidden_size))?;
 
         // Project Q, K, V
-        let mut q = x_2d.matmul(&self.q_proj.t()?)?;
-        let mut k = x_2d.matmul(&self.k_proj.t()?)?;
+        let q = x_2d.matmul(&self.q_proj.t()?)?;
+        let k = x_2d.matmul(&self.k_proj.t()?)?;
         let v = x_2d.matmul(&self.v_proj.t()?)?;
 
-        // Apply Q/K normalization if present (Qwen3)
-        if let Some(q_norm) = &self.q_norm {
-            let q_3d = q.reshape((batch, seq_len, self.num_heads * self.head_dim))?;
-            q = q_norm.forward(&q_3d)?;
-            q = q.reshape((batch * seq_len, self.num_heads * self.head_dim))?;
-        }
-        if let Some(k_norm) = &self.k_norm {
-            let k_3d = k.reshape((batch, seq_len, self.num_kv_heads * self.head_dim))?;
-            k = k_norm.forward(&k_3d)?;
-            k = k.reshape((batch * seq_len, self.num_kv_heads * self.head_dim))?;
-        }
-
-        // Reshape to [batch, seq, num_heads, head_dim] then transpose
-        let q = q
+        // Reshape to [batch, seq, num_heads, head_dim] then transpose to [batch, heads, seq, head_dim]
+        let mut q = q
             .reshape((batch, seq_len, self.num_heads, self.head_dim))?
             .transpose(1, 2)?;
-        let k = k
+        let mut k = k
             .reshape((batch, seq_len, self.num_kv_heads, self.head_dim))?
             .transpose(1, 2)?;
         let v = v
             .reshape((batch, seq_len, self.num_kv_heads, self.head_dim))?
             .transpose(1, 2)?;
+
+        // Apply Q/K normalization AFTER reshape (Qwen3: normalizes per head_dim, not full hidden)
+        if let Some(q_norm) = &self.q_norm {
+            q = q_norm.forward(&q)?;
+        }
+        if let Some(k_norm) = &self.k_norm {
+            k = k_norm.forward(&k)?;
+        }
 
         Ok((q, k, v))
     }

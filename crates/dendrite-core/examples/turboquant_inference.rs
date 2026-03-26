@@ -124,9 +124,11 @@ fn main() -> anyhow::Result<()> {
     demonstrate_turboquant_pages(&device, head_dim)?;
 
     // Prepare input prompt
-    let prompt_tokens: Vec<u32> = vec![1, 15043, 29892, 590, 1024, 338]; // "<s>Hello, my name is"
+    // Get Qwen3 tokens for "Hello, my name is" via tokenizer
+    // Qwen3 uses a BPE tokenizer; these are approximate token IDs
+    let prompt_tokens: Vec<u32> = vec![9707, 11, 856, 836, 374]; // "Hello, my name is" (Qwen3 BPE)
     println!("\nPrompt tokens: {:?}", prompt_tokens);
-    println!("(Approximate: '<s>Hello, my name is')");
+    println!("(Approximate: 'Hello, my name is')");
 
     // Generate with proper KV caching
     println!("\n--- Generation with KV Cache ---");
