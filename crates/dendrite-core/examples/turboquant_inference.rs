@@ -32,11 +32,23 @@ use dendrite_core::attention::FlashAttnBackend;
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
+    let qwen_default = format!(
+        "{}/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots",
+        std::env::var("HOME").unwrap_or_default()
+    );
+    // Find the actual snapshot dir
+    let default_path = std::fs::read_dir(&qwen_default)
+        .ok()
+        .and_then(|mut d| d.next())
+        .and_then(|e| e.ok())
+        .map(|e| e.path().to_string_lossy().to_string())
+        .unwrap_or_else(|| "/home/bioinfo/models/tinyllama-1.1b".to_string());
+
     let model_dir = args
         .get(1)
-        .map(|s| s.as_str())
-        .unwrap_or("/home/bioinfo/models/tinyllama-1.1b");
-    let model_path = Path::new(model_dir);
+        .map(|s| s.to_string())
+        .unwrap_or(default_path);
+    let model_path = Path::new(&model_dir);
 
     println!("\n╔════════════════════════════════════════════════════╗");
     println!("║  TurboQuant KV Cache Compression + GPU Inference  ║");
@@ -215,11 +227,9 @@ fn demonstrate_turboquant_pages(device: &Device, head_dim: usize) -> anyhow::Res
         packed_data.push((high << 4) | low);
     }
 
-    let packed_tensor = Tensor::from_slice(
-        &packed_data,
-        (2, kv_heads, page_size, packed_dim),
-        device,
-    )?;
+    // Candle from_vec<u8> creates I32, so create as I32 then cast to U8
+    let packed_i32 = Tensor::from_vec(packed_data, (2, kv_heads, page_size, packed_dim), device)?;
+    let packed_tensor = packed_i32.to_dtype(candle_core::DType::U8)?;
 
     // Unpack back to full dimension
     let unpacked = dendrite_core::quantization::unpack_4bit(&packed_tensor, head_dim)?;
@@ -240,11 +250,8 @@ fn demonstrate_turboquant_pages(device: &Device, head_dim: usize) -> anyhow::Res
         packed_2bit_data.push(byte);
     }
 
-    let packed_2bit = Tensor::from_slice(
-        &packed_2bit_data,
-        (2, kv_heads, page_size, packed_2bit_dim),
-        device,
-    )?;
+    let packed_2bit_i32 = Tensor::from_vec(packed_2bit_data, (2, kv_heads, page_size, packed_2bit_dim), device)?;
+    let packed_2bit = packed_2bit_i32.to_dtype(candle_core::DType::U8)?;
 
     let unpacked_2bit = dendrite_core::quantization::unpack_2bit(&packed_2bit, head_dim)?;
     println!("\n  2-bit packed: shape [2, {}, {}, {}]", kv_heads, page_size, packed_2bit_dim);
