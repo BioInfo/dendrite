@@ -51,10 +51,60 @@ impl PageId {
     }
 }
 
+/// Storage format for KV cache pages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PageFormat {
+    /// Standard FP16/BF16 storage: [2, kv_heads, page_size, head_dim]
+    Full,
+    /// TurboQuant 4-bit packed: indices as uint8 (2 values/byte) + fp16 norms.
+    /// Indices: [2, kv_heads, page_size, head_dim/2] (uint8, packed)
+    /// Norms: [2, kv_heads, page_size, 1] (fp16)
+    /// Compression: ~3.9x vs FP16 at scale.
+    TurboQuant4Bit,
+    /// TurboQuant 2-bit packed: indices as uint8 (4 values/byte) + fp16 norms.
+    /// Compression: ~7.5x vs FP16 at scale.
+    TurboQuant2Bit,
+}
+
+impl PageFormat {
+    /// Bytes per element for quantized indices.
+    pub fn bytes_per_element(&self) -> f64 {
+        match self {
+            PageFormat::Full => 2.0,           // fp16
+            PageFormat::TurboQuant4Bit => 0.5, // 4 bits packed
+            PageFormat::TurboQuant2Bit => 0.25, // 2 bits packed
+        }
+    }
+
+    /// Memory per token per KV head (bytes).
+    pub fn bytes_per_token_per_head(&self, head_dim: usize) -> usize {
+        match self {
+            PageFormat::Full => head_dim * 2 * 2, // K+V, fp16
+            PageFormat::TurboQuant4Bit => {
+                // Packed indices: head_dim/2 bytes + 2 bytes norm, for K+V
+                (head_dim / 2 + 2) * 2
+            }
+            PageFormat::TurboQuant2Bit => {
+                // Packed indices: head_dim/4 bytes + 2 bytes norm, for K+V
+                (head_dim / 4 + 2) * 2
+            }
+        }
+    }
+
+    /// Compression ratio vs FP16.
+    pub fn compression_ratio(&self, head_dim: usize) -> f64 {
+        let fp16 = PageFormat::Full.bytes_per_token_per_head(head_dim) as f64;
+        let this = self.bytes_per_token_per_head(head_dim) as f64;
+        fp16 / this
+    }
+}
+
 /// A single page of KV cache data.
 ///
 /// Each page stores `page_size` tokens worth of keys and values.
-/// Shape: [2, num_kv_heads, page_size, head_dim] where 2 is for K and V.
+/// Shape depends on format:
+/// - Full: [2, num_kv_heads, page_size, head_dim] (fp16)
+/// - TurboQuant4Bit: indices [2, kv_heads, page_size, head_dim/2] (u8) + norms
 #[derive(Debug)]
 pub struct Page {
     /// Page identifier.
@@ -65,6 +115,11 @@ pub struct Page {
     len: AtomicUsize,
     /// KV data: [2, num_kv_heads, page_size, head_dim]
     data: Option<Tensor>,
+    /// Storage format (defaults to Full for backward compatibility).
+    format: PageFormat,
+    /// Quantization norms (only for TurboQuant formats).
+    /// Shape: [2, num_kv_heads, page_size, 1]
+    norms: Option<Tensor>,
 }
 
 impl Page {
@@ -75,6 +130,8 @@ impl Page {
             ref_count: AtomicU32::new(1),
             len: AtomicUsize::new(0),
             data: None,
+            format: PageFormat::Full,
+            norms: None,
         }
     }
 
@@ -98,7 +155,53 @@ impl Page {
             ref_count: AtomicU32::new(1),
             len: AtomicUsize::new(0),
             data: Some(data),
+            format: PageFormat::Full,
+            norms: None,
         })
+    }
+
+    /// Create a TurboQuant quantized page (4-bit packed).
+    ///
+    /// Stores KV as packed uint8 indices (2 values per byte) + fp16 norms.
+    /// Uses ~3.9x less memory than FP16 pages at scale.
+    pub fn with_turboquant_4bit(
+        id: PageId,
+        num_kv_heads: usize,
+        page_size: usize,
+        head_dim: usize,
+        device: &Device,
+    ) -> Result<Self> {
+        // Packed 4-bit: head_dim/2 bytes per element
+        let packed_dim = head_dim / 2;
+        let data = Tensor::zeros(
+            (2, num_kv_heads, page_size, packed_dim),
+            DType::U8,
+            device,
+        )?;
+        let norms = Tensor::zeros(
+            (2, num_kv_heads, page_size, 1),
+            DType::F16,
+            device,
+        )?;
+
+        Ok(Self {
+            id,
+            ref_count: AtomicU32::new(1),
+            len: AtomicUsize::new(0),
+            data: Some(data),
+            format: PageFormat::TurboQuant4Bit,
+            norms: Some(norms),
+        })
+    }
+
+    /// Get the storage format.
+    pub fn format(&self) -> PageFormat {
+        self.format
+    }
+
+    /// Get the norms tensor (TurboQuant only).
+    pub fn norms(&self) -> Option<&Tensor> {
+        self.norms.as_ref()
     }
 
     /// Get page ID.
@@ -636,5 +739,66 @@ mod tests {
         // Free sequences
         cache.free_sequence(seq1);
         cache.free_sequence(seq2);
+    }
+
+    #[test]
+    fn turboquant_page_format_compression() {
+        // Verify TurboQuant compression ratios
+        let head_dim = 128;
+
+        let full_bytes = PageFormat::Full.bytes_per_token_per_head(head_dim);
+        let tq4_bytes = PageFormat::TurboQuant4Bit.bytes_per_token_per_head(head_dim);
+        let tq2_bytes = PageFormat::TurboQuant2Bit.bytes_per_token_per_head(head_dim);
+
+        // Full: 128 * 2 bytes * 2 (K+V) = 512 bytes/token/head
+        assert_eq!(full_bytes, 512);
+        // TQ4: (128/2 + 2) * 2 = 132 bytes/token/head
+        assert_eq!(tq4_bytes, 132);
+        // TQ2: (128/4 + 2) * 2 = 68 bytes/token/head
+        assert_eq!(tq2_bytes, 68);
+
+        let ratio_4bit = PageFormat::TurboQuant4Bit.compression_ratio(head_dim);
+        let ratio_2bit = PageFormat::TurboQuant2Bit.compression_ratio(head_dim);
+
+        // 4-bit: ~3.88x compression
+        assert!(ratio_4bit > 3.5 && ratio_4bit < 4.5, "4-bit ratio: {ratio_4bit}");
+        // 2-bit: ~7.53x compression
+        assert!(ratio_2bit > 7.0 && ratio_2bit < 8.0, "2-bit ratio: {ratio_2bit}");
+    }
+
+    #[test]
+    fn turboquant_page_creation() {
+        let page = Page::with_turboquant_4bit(
+            PageId::new(0), 8, DEFAULT_PAGE_SIZE, 128, &Device::Cpu,
+        ).unwrap();
+
+        assert_eq!(page.format(), PageFormat::TurboQuant4Bit);
+        assert!(page.norms().is_some());
+        assert!(page.is_empty());
+
+        // Data should be uint8 with halved last dim
+        let data = page.data().unwrap();
+        let shape = data.dims();
+        assert_eq!(shape, &[2, 8, DEFAULT_PAGE_SIZE, 64]); // 128/2 = 64 packed
+    }
+
+    #[test]
+    fn turboquant_memory_savings() {
+        // Compare memory: 1000 pages, 32 layers, 8 heads, dim=128
+        let num_pages = 1000;
+        let head_dim = 128;
+        let page_size = DEFAULT_PAGE_SIZE;
+        let num_heads = 8;
+
+        let full_mem = num_pages * page_size * num_heads * PageFormat::Full.bytes_per_token_per_head(head_dim);
+        let tq4_mem = num_pages * page_size * num_heads * PageFormat::TurboQuant4Bit.bytes_per_token_per_head(head_dim);
+
+        let savings_gb = (full_mem - tq4_mem) as f64 / 1e9;
+        let ratio = full_mem as f64 / tq4_mem as f64;
+
+        // With 1000 pages * 16 tokens = 16K tokens
+        // Full: ~64MB, TQ4: ~16MB per layer
+        assert!(ratio > 3.5, "Expected >3.5x savings, got {ratio}x");
+        assert!(savings_gb > 0.0, "Expected positive savings");
     }
 }
