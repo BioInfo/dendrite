@@ -21,6 +21,10 @@ pub struct Attention {
     v_proj: Tensor,
     /// Output projection: [hidden_size, num_heads * head_dim]
     o_proj: Tensor,
+    /// Optional query normalization (Qwen3).
+    q_norm: Option<RmsNorm>,
+    /// Optional key normalization (Qwen3).
+    k_norm: Option<RmsNorm>,
     /// Number of attention heads.
     num_heads: usize,
     /// Number of key-value heads (for GQA).
@@ -70,6 +74,8 @@ impl Attention {
             k_proj,
             v_proj,
             o_proj,
+            q_norm: None,
+            k_norm: None,
             num_heads,
             num_kv_heads,
             head_dim,
@@ -93,6 +99,35 @@ impl Attention {
             k_proj,
             v_proj,
             o_proj,
+            q_norm: None,
+            k_norm: None,
+            num_heads,
+            num_kv_heads,
+            head_dim,
+            hidden_size,
+        })
+    }
+
+    /// Create attention with Q/K normalization (for Qwen3).
+    pub fn new_with_qk_norm(
+        q_proj: Tensor,
+        k_proj: Tensor,
+        v_proj: Tensor,
+        o_proj: Tensor,
+        q_norm: Option<RmsNorm>,
+        k_norm: Option<RmsNorm>,
+        num_heads: usize,
+        num_kv_heads: usize,
+        head_dim: usize,
+    ) -> Result<Self> {
+        let hidden_size = q_proj.dims()[1];
+        Ok(Self {
+            q_proj,
+            k_proj,
+            v_proj,
+            o_proj,
+            q_norm,
+            k_norm,
             num_heads,
             num_kv_heads,
             head_dim,
@@ -115,9 +150,21 @@ impl Attention {
         let x_2d = x.reshape((batch * seq_len, self.hidden_size))?;
 
         // Project Q, K, V
-        let q = x_2d.matmul(&self.q_proj.t()?)?;
-        let k = x_2d.matmul(&self.k_proj.t()?)?;
+        let mut q = x_2d.matmul(&self.q_proj.t()?)?;
+        let mut k = x_2d.matmul(&self.k_proj.t()?)?;
         let v = x_2d.matmul(&self.v_proj.t()?)?;
+
+        // Apply Q/K normalization if present (Qwen3)
+        if let Some(q_norm) = &self.q_norm {
+            let q_3d = q.reshape((batch, seq_len, self.num_heads * self.head_dim))?;
+            q = q_norm.forward(&q_3d)?;
+            q = q.reshape((batch * seq_len, self.num_heads * self.head_dim))?;
+        }
+        if let Some(k_norm) = &self.k_norm {
+            let k_3d = k.reshape((batch, seq_len, self.num_kv_heads * self.head_dim))?;
+            k = k_norm.forward(&k_3d)?;
+            k = k.reshape((batch * seq_len, self.num_kv_heads * self.head_dim))?;
+        }
 
         // Reshape to [batch, seq, num_heads, head_dim] then transpose
         let q = q

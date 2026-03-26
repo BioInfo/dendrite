@@ -174,11 +174,28 @@ impl Transformer {
         let v_proj = loader.get_tensor(&format!("{}.self_attn.v_proj.weight", prefix))?;
         let o_proj = loader.get_tensor(&format!("{}.self_attn.o_proj.weight", prefix))?;
 
-        let attention = super::Attention::new(
+        // Load optional Q/K normalization (Qwen3)
+        let q_norm = if loader.contains(&format!("{}.self_attn.q_norm.weight", prefix)) {
+            let q_norm_weight = loader.get_tensor(&format!("{}.self_attn.q_norm.weight", prefix))?;
+            Some(RmsNorm::new(q_norm_weight, self.config.rms_norm_eps)?)
+        } else {
+            None
+        };
+
+        let k_norm = if loader.contains(&format!("{}.self_attn.k_norm.weight", prefix)) {
+            let k_norm_weight = loader.get_tensor(&format!("{}.self_attn.k_norm.weight", prefix))?;
+            Some(RmsNorm::new(k_norm_weight, self.config.rms_norm_eps)?)
+        } else {
+            None
+        };
+
+        let attention = super::Attention::new_with_qk_norm(
             q_proj,
             k_proj,
             v_proj,
             o_proj,
+            q_norm,
+            k_norm,
             self.config.num_attention_heads,
             self.config.num_key_value_heads,
             self.config.head_dim(),
