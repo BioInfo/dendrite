@@ -119,9 +119,9 @@ fn main() -> anyhow::Result<()> {
         load_time.as_secs_f64()
     );
 
-    // Demonstrate TurboQuant page creation and dequantization
+    // Demonstrate TurboQuant page creation (always on CPU for U8 support)
     println!("\n--- TurboQuant Page Simulation ---");
-    demonstrate_turboquant_pages(&device, head_dim)?;
+    demonstrate_turboquant_pages(&Device::Cpu, head_dim)?;
 
     // Prepare input prompt
     // Get Qwen3 tokens for "Hello, my name is" via tokenizer
@@ -145,54 +145,76 @@ fn main() -> anyhow::Result<()> {
     println!("  Generated {} new tokens in {:.2}ms", num_new_tokens, gen_time.as_secs_f64() * 1000.0);
     println!("  Throughput: {:.1} tokens/s", tokens_per_sec);
 
-    // Benchmark: Prefill vs Decode timing
-    println!("\n--- Detailed Timing Breakdown ---");
+    // Context Window Scaling Benchmark
+    println!("\n--- Context Window Scaling ---");
+    println!("{:>8} | {:>10} | {:>10} | {:>10} | {:>12} | {:>12}",
+        "Context", "Prefill", "Decode", "tok/s", "FP16 KV", "TQ4 KV");
+    println!("{}", "-".repeat(80));
 
-    let mut cache = transformer.create_cache();
+    let kv_heads = config.num_key_value_heads;
 
-    // Prefill benchmark
-    let prefill_input =
-        Tensor::from_slice(&prompt_tokens, (1, prompt_tokens.len()), &device)?;
-    let prefill_start = Instant::now();
-    let logits = tokio::runtime::Runtime::new()?
-        .block_on(transformer.forward_with_cache(&prefill_input, &mut cache))?;
-    let prefill_time = prefill_start.elapsed();
+    for ctx_size in [16, 64, 256, 512, 1024, 2048] {
+        // Create dummy prompt of ctx_size tokens (repeat a pattern)
+        let base: Vec<u32> = vec![9707, 11, 856, 836, 374]; // "Hello, my name is"
+        let mut long_prompt: Vec<u32> = Vec::new();
+        while long_prompt.len() < ctx_size {
+            long_prompt.extend_from_slice(&base);
+        }
+        long_prompt.truncate(ctx_size);
 
-    println!(
-        "Prefill {} tokens: {:.2}ms ({:.2} tokens/ms)",
-        prompt_tokens.len(),
-        prefill_time.as_secs_f64() * 1000.0,
-        prompt_tokens.len() as f64 / prefill_time.as_secs_f64() / 1000.0
-    );
+        let mut cache = transformer.create_cache();
 
-    // Get first generated token
-    let next_token = transformer.sample(&logits, 0.0)?;
-    println!("Cache size after prefill: {} tokens", cache.seq_len());
-
-    // Decode benchmark (5 steps)
-    println!("\nDecode timing (with KV cache):");
-    let mut decode_times = Vec::new();
-    let mut current_token = next_token;
-
-    for i in 0..5 {
-        let input = Tensor::from_slice(&[current_token], (1, 1), &device)?;
-        let decode_start = Instant::now();
+        // Prefill
+        let prefill_input = Tensor::from_slice(
+            &long_prompt, (1, long_prompt.len()), &device
+        )?;
+        let prefill_start = Instant::now();
         let logits = tokio::runtime::Runtime::new()?
-            .block_on(transformer.forward_with_cache(&input, &mut cache))?;
-        let decode_time = decode_start.elapsed();
-        decode_times.push(decode_time.as_secs_f64() * 1000.0);
+            .block_on(transformer.forward_with_cache(&prefill_input, &mut cache))?;
+        let prefill_ms = prefill_start.elapsed().as_secs_f64() * 1000.0;
 
-        current_token = transformer.sample(&logits, 0.0)?;
+        // Decode 10 tokens
+        let mut current_token = transformer.sample(&logits, 0.0)?;
+        let decode_start = Instant::now();
+        for _ in 0..10 {
+            let input = Tensor::from_slice(&[current_token], (1, 1), &device)?;
+            let logits = tokio::runtime::Runtime::new()?
+                .block_on(transformer.forward_with_cache(&input, &mut cache))?;
+            current_token = transformer.sample(&logits, 0.0)?;
+        }
+        let decode_ms = decode_start.elapsed().as_secs_f64() * 1000.0;
+        let tok_per_sec = 10.0 / (decode_ms / 1000.0);
+
+        // KV cache memory projection
+        let layers = config.num_hidden_layers;
+        let fp16_kv_mb = (2 * layers * kv_heads * head_dim * 2 * ctx_size) as f64 / 1e6;
+        let tq4_kv_mb = fp16_kv_mb / 3.88;
+
         println!(
-            "  Step {}: {:.2}ms (cache: {} tokens)",
-            i + 1,
-            decode_time.as_secs_f64() * 1000.0,
-            cache.seq_len()
+            "{:>8} | {:>8.1}ms | {:>8.1}ms | {:>8.1} | {:>10.2}MB | {:>10.2}MB",
+            ctx_size, prefill_ms, decode_ms, tok_per_sec, fp16_kv_mb, tq4_kv_mb
         );
     }
 
-    let avg_decode: f64 = decode_times.iter().sum::<f64>() / decode_times.len() as f64;
-    println!("\nAverage decode latency: {:.2}ms per token", avg_decode);
+    // Detailed decode for the 256-token case
+    println!("\n--- Decode Latency Detail (256 token context) ---");
+    let base: Vec<u32> = vec![9707, 11, 856, 836, 374];
+    let prompt_256: Vec<u32> = base.iter().cycle().take(256).cloned().collect();
+    let mut cache = transformer.create_cache();
+    let prefill_input = Tensor::from_slice(&prompt_256, (1, 256), &device)?;
+    let logits = tokio::runtime::Runtime::new()?
+        .block_on(transformer.forward_with_cache(&prefill_input, &mut cache))?;
+    let mut current_token = transformer.sample(&logits, 0.0)?;
+
+    for i in 0..5 {
+        let input = Tensor::from_slice(&[current_token], (1, 1), &device)?;
+        let step_start = Instant::now();
+        let logits = tokio::runtime::Runtime::new()?
+            .block_on(transformer.forward_with_cache(&input, &mut cache))?;
+        let step_ms = step_start.elapsed().as_secs_f64() * 1000.0;
+        current_token = transformer.sample(&logits, 0.0)?;
+        println!("  Step {}: {:.2}ms (cache: {} tokens)", i + 1, step_ms, cache.seq_len());
+    }
 
     // Summary
     println!("\n╔════════════════════════════════════════════════════╗");
