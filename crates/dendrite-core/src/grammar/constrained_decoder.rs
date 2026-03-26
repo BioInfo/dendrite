@@ -205,7 +205,7 @@ mod tests {
     fn constrained_decoder_json_schema() {
         use crate::model::Tokenizer;
 
-        let tokenizer = Tokenizer::from_dir("/home/bioinfo/models/tinyllama-1.1b").unwrap();
+        let tokenizer = Tokenizer::from_dir("/path/to/your/model").unwrap();
         let schema = r#"{
             "type": "object",
             "properties": {
@@ -234,7 +234,7 @@ mod tests {
     fn constrained_decoder_regex() {
         use crate::model::Tokenizer;
 
-        let tokenizer = Tokenizer::from_dir("/home/bioinfo/models/tinyllama-1.1b").unwrap();
+        let tokenizer = Tokenizer::from_dir("/path/to/your/model").unwrap();
         let mut decoder = ConstrainedDecoder::new(
             &tokenizer,
             Grammar::regex(r"\d{4}-\d{2}-\d{2}"), // ISO date: YYYY-MM-DD

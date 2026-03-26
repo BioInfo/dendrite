@@ -195,7 +195,7 @@ mod tests {
     #[ignore = "requires model files"]
     fn build_tok_env_from_model() {
         use crate::model::Tokenizer;
-        let tokenizer = Tokenizer::from_dir("/home/bioinfo/models/tinyllama-1.1b").unwrap();
+        let tokenizer = Tokenizer::from_dir("/path/to/your/model").unwrap();
         let tok_env = build_tok_env(&tokenizer).unwrap();
         println!("TokEnv built successfully, tokenizer vocab: {}", tokenizer.vocab_size());
         assert!(tokenizer.vocab_size() > 0);
