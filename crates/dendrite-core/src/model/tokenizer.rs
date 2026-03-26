@@ -168,7 +168,7 @@ mod tests {
     #[test]
     #[ignore = "requires model files"]
     fn tokenizer_load() {
-        let tokenizer = Tokenizer::from_dir("/home/bioinfo/models/tinyllama-1.1b").unwrap();
+        let tokenizer = Tokenizer::from_dir("/path/to/your/model").unwrap();
         println!("Vocab size: {}", tokenizer.vocab_size());
         println!("BOS: {:?}", tokenizer.bos_token_id());
         println!("EOS: {:?}", tokenizer.eos_token_id());
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     #[ignore = "requires model files"]
     fn tokenizer_encode_decode() {
-        let tokenizer = Tokenizer::from_dir("/home/bioinfo/models/tinyllama-1.1b").unwrap();
+        let tokenizer = Tokenizer::from_dir("/path/to/your/model").unwrap();
 
         let text = "Hello, my name is";
         let tokens = tokenizer.encode(text, true).unwrap();
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     #[ignore = "requires model files"]
     fn tokenizer_individual_tokens() {
-        let tokenizer = Tokenizer::from_dir("/home/bioinfo/models/tinyllama-1.1b").unwrap();
+        let tokenizer = Tokenizer::from_dir("/path/to/your/model").unwrap();
 
         // TinyLlama tokens for "Hello, my name is" with BOS
         let tokens = vec![1, 15043, 29892, 590, 1024, 338];
