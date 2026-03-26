@@ -112,6 +112,7 @@ pub mod cache;
 pub mod error;
 pub mod grammar;
 pub mod model;
+pub mod quantization;
 pub mod scheduler;
 pub mod search;
 pub mod tree;
@@ -121,8 +122,9 @@ pub use error::{DendriteError, Result};
 /// Re-export commonly used types
 pub mod prelude {
     pub use crate::attention::AttentionBackend;
-    pub use crate::cache::{Block, BlockTable, KvCache, RadixTree};
+    pub use crate::cache::{Block, BlockTable, KvCache, RadixTree, PageFormat};
     pub use crate::error::{DendriteError, Result};
+    pub use crate::quantization::{unpack_4bit, unpack_2bit};
     pub use crate::scheduler::{BatchConfig, Request, Scheduler};
     pub use crate::search::{
         BeamConfig, BeamSearch, MctsConfig, MctsSearch, Scorer, UctScorer,
