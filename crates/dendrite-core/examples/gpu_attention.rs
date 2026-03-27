@@ -7,11 +7,6 @@
 //! cargo run -p dendrite-core --features cuda --example gpu_attention
 //! ```
 
-use candle_core::{DType, Device, Tensor};
-use dendrite_core::attention::{AttentionBackend, AttentionConfig};
-use dendrite_core::cache::BlockTable;
-use std::time::Instant;
-
 #[cfg(feature = "cuda")]
 use dendrite_core::attention::FlashAttnBackend;
 

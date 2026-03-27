@@ -255,6 +255,7 @@ mod tests {
     fn grammar_none_returns_error() {
         // Using Grammar::None should fail at construction since it provides no constraint
         // (You'd just use the unconstrained generation path instead)
+        #[allow(dead_code)]
         struct MockTokenizer;
         // We can't easily build a full tokenizer here without model files,
         // but the error path is tested via the None -> Err conversion in new()

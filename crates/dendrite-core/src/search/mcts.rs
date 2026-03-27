@@ -538,8 +538,8 @@ mod tests {
         assert_eq!(probs.len(), 2);
         // Action 1 has 3 visits, action 2 has 1 visit
         // Probabilities: 0.75 and 0.25
-        let (a1, p1) = probs.iter().find(|(a, _)| *a == 1).unwrap();
-        let (a2, p2) = probs.iter().find(|(a, _)| *a == 2).unwrap();
+        let (_a1, p1) = probs.iter().find(|(a, _)| *a == 1).unwrap();
+        let (_a2, p2) = probs.iter().find(|(a, _)| *a == 2).unwrap();
         assert!((p1 - 0.75).abs() < 0.01);
         assert!((p2 - 0.25).abs() < 0.01);
     }

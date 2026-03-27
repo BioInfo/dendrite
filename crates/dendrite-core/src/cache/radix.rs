@@ -277,6 +277,7 @@ impl RadixTree {
         results
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn collect_blocks(&self, node: &RadixNode, results: &mut Vec<usize>) {
         if let Some(idx) = node.block_idx {
             results.push(idx);

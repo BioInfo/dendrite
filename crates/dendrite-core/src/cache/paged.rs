@@ -649,11 +649,11 @@ mod tests {
         let p1 = pool.allocate().unwrap();
         assert_eq!(pool.num_free(), 1);
 
-        let p2 = pool.allocate().unwrap();
+        let _p2 = pool.allocate().unwrap();
         assert_eq!(pool.num_free(), 0);
 
         // Should allocate new page
-        let p3 = pool.allocate().unwrap();
+        let _p3 = pool.allocate().unwrap();
         assert_eq!(pool.num_pages(), 3);
 
         // Free a page

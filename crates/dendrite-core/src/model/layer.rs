@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 //! Transformer layer implementation.
 //!
 //! A single transformer decoder layer combining:
@@ -99,6 +100,7 @@ impl Attention {
     }
 
     /// Create attention with Q/K normalization (for Qwen3).
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_qk_norm(
         q_proj: Tensor,
         k_proj: Tensor,

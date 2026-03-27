@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 //! KV cache for transformer inference.
 //!
 //! This module provides a simple KV cache that stores key-value tensors
@@ -9,7 +10,7 @@
 
 use crate::cache::compress::{CompressedVec, KvCompressor};
 use crate::error::Result;
-use candle_core::{DType, Device, Tensor};
+use candle_core::{Device, Tensor};
 use std::sync::Arc;
 
 /// KV cache for a single layer.
@@ -192,6 +193,7 @@ impl CompressedLayerCache {
     }
 
     /// Compress `tensor` ([batch, heads, seq_len, head_dim]) and append to store.
+    #[allow(clippy::needless_range_loop)]
     fn compress_and_store(
         compressor: &dyn KvCompressor,
         tensor: &Tensor,
@@ -219,16 +221,16 @@ impl CompressedLayerCache {
     }
 
     /// Reconstruct a full `[batch, heads, seq_len, head_dim]` tensor from compressed store.
-    fn decompress_all(&self, store: &Vec<Vec<Vec<CompressedVec>>>) -> crate::error::Result<Tensor> {
+    fn decompress_all(&self, store: &[Vec<Vec<CompressedVec>>]) -> crate::error::Result<Tensor> {
         let head_dim = self.head_dim.unwrap_or(64);
         let batch = store.len();
         let heads = store[0].len();
         let seq = store[0][0].len();
 
         let mut flat: Vec<f32> = Vec::with_capacity(batch * heads * seq * head_dim);
-        for b in 0..batch {
-            for h in 0..heads {
-                for s in 0..seq {
+        for (b, batch_item) in store.iter().enumerate() {
+            for (h, head_item) in batch_item.iter().enumerate() {
+                for (s, _seq_item) in head_item.iter().enumerate() {
                     let vec = self.compressor.decompress(&store[b][h][s], head_dim);
                     flat.extend_from_slice(&vec);
                 }
@@ -322,6 +324,7 @@ impl CompressedKvCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use candle_core::DType;
 
     #[test]
     fn layer_cache_empty() {

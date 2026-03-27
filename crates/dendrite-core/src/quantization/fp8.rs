@@ -188,6 +188,7 @@ impl QuantizedTensor {
 /// let quantized = quantize_weights(&weight_tensors, &config)?;
 /// println!("Compression: {:.2}x", quantized[0].compression_ratio());
 /// ```
+#[allow(dead_code)]
 pub fn quantize_weights(weights: &[Tensor], config: &Fp8Config) -> Result<Vec<QuantizedTensor>> {
     weights
         .iter()

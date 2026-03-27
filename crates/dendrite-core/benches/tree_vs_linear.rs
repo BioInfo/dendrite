@@ -117,8 +117,8 @@ fn linear_branch_simulation(config: &BenchConfig) -> (usize, usize) {
     }
 
     // In linear mode, prefix is duplicated for each branch
-    let prefix_blocks = (config.prefix_tokens + 15) / 16;
-    let branch_blocks = (config.tokens_per_branch + 15) / 16;
+    let prefix_blocks = config.prefix_tokens.div_ceil(16);
+    let branch_blocks = config.tokens_per_branch.div_ceil(16);
     let duplicated_blocks = prefix_blocks * config.num_branches;
     let total_branch_blocks = branch_blocks * config.num_branches;
 

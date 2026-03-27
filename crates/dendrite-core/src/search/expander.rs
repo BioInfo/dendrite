@@ -140,7 +140,8 @@ impl TokenExpander {
         indexed_probs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         // Apply top-p (nucleus sampling) if configured
-        let selected = if let Some(top_p) = self.config.top_p {
+
+        if let Some(top_p) = self.config.top_p {
             let mut cumsum = 0.0;
             indexed_probs
                 .into_iter()
@@ -158,9 +159,7 @@ impl TokenExpander {
                 .take(self.config.max_children)
                 .filter(|(_, p)| *p >= self.config.min_prob)
                 .collect()
-        };
-
-        selected
+        }
     }
 }
 
