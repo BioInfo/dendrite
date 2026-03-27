@@ -47,14 +47,22 @@
 
 mod block;
 mod block_table;
+pub mod compress;
 mod paged;
 mod pool;
+mod prefix_cache;
 mod radix;
 
 pub use block::{Block, BlockId};
 pub use block_table::BlockTable;
+pub use compress::{
+    CompressionScheme, CompressedVec, IdentityCompressor, KvCompressor,
+    PolarQuantCompressor, QjlCompressor, TurboQuantCompressor,
+    compression_ratio_vs_fp16, relative_l2_error,
+};
 pub use paged::{Page, PageId, PagePool, PageTable, PagedKvCache, PageFormat, DEFAULT_PAGE_SIZE};
-pub use pool::BlockPool;
+pub use pool::{BlockPool, PoolStats};
+pub use prefix_cache::{PrefixCache, PrefixCacheStats, PrefixHit};
 pub use radix::{RadixTree, RadixTreeStats};
 
 /// Number of tokens per KV cache block.
@@ -140,6 +148,11 @@ impl KvCache {
     pub fn used_blocks(&self) -> usize {
         self.config.max_blocks - self.pool.free_count()
     }
+
+    /// Fraction of pool currently in use (0.0–1.0).
+    pub fn utilization(&self) -> f32 {
+        self.pool.utilization()
+    }
 }
 
 #[cfg(test)]
@@ -159,10 +172,11 @@ mod tests {
 
     #[test]
     fn new_cache_has_all_blocks_free() {
-        let cache = create_test_cache(100);
-        assert_eq!(cache.free_blocks(), 100);
+        // Use a small pool (< 64) so no headroom is reserved.
+        let cache = create_test_cache(32);
+        assert_eq!(cache.free_blocks(), 32);
         assert_eq!(cache.used_blocks(), 0);
-        assert_eq!(cache.total_blocks(), 100);
+        assert_eq!(cache.total_blocks(), 32);
     }
 
     #[test]

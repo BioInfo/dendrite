@@ -48,6 +48,7 @@ impl RadixNode {
         }
     }
 
+    #[allow(dead_code)]
     fn with_block(block_idx: usize) -> Self {
         Self {
             children: HashMap::new(),
@@ -283,6 +284,34 @@ impl RadixTree {
         for child in node.children.values() {
             self.collect_blocks(child, results);
         }
+    }
+
+    /// Remove the entry with the given value (block_idx) by scanning the tree.
+    ///
+    /// This is O(N) over tree nodes but is only called during eviction — an
+    /// infrequent path. Returns true if an entry was removed.
+    pub fn remove_by_value(&mut self, value: usize) -> bool {
+        // Collect the token path to the node that has this value
+        let mut path: Vec<u32> = Vec::new();
+        if Self::find_path_by_value(&self.root, value, &mut path) {
+            self.remove(&path);
+            return true;
+        }
+        false
+    }
+
+    fn find_path_by_value(node: &RadixNode, value: usize, path: &mut Vec<u32>) -> bool {
+        if node.block_idx == Some(value) {
+            return true;
+        }
+        for (&token, child) in &node.children {
+            path.push(token);
+            if Self::find_path_by_value(child, value, path) {
+                return true;
+            }
+            path.pop();
+        }
+        false
     }
 }
 

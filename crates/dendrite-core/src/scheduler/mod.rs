@@ -6,10 +6,12 @@
 //! - Preemption and swapping
 
 mod batch;
+mod continuous;
 mod policy;
 mod request;
 
 pub use batch::{Batch, BatchConfig};
+pub use continuous::{ContinuousBatcher, MixedStep, PrefillChunk, StepStats};
 pub use policy::SchedulingPolicy;
 pub use request::{Request, RequestId, RequestState};
 
@@ -109,6 +111,11 @@ impl Scheduler {
     /// Get number of running requests.
     pub fn num_running(&self) -> usize {
         self.running.lock().len()
+    }
+
+    /// Push a request directly into the running queue (for benchmarks / tests).
+    pub fn push_running(&self, request: Request) {
+        self.running.lock().push(request);
     }
 
     /// Check if scheduler is idle.
