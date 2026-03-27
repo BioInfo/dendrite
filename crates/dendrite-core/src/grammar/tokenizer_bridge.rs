@@ -197,7 +197,10 @@ mod tests {
         use crate::model::Tokenizer;
         let tokenizer = Tokenizer::from_dir("/path/to/your/model").unwrap();
         let tok_env = build_tok_env(&tokenizer).unwrap();
-        println!("TokEnv built successfully, tokenizer vocab: {}", tokenizer.vocab_size());
+        println!(
+            "TokEnv built successfully, tokenizer vocab: {}",
+            tokenizer.vocab_size()
+        );
         assert!(tokenizer.vocab_size() > 0);
         drop(tok_env);
     }

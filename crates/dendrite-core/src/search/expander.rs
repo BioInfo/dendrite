@@ -111,14 +111,23 @@ impl TokenExpander {
     pub fn select_tokens(&self, logits: &[f32]) -> Vec<(u32, f32)> {
         // Apply temperature
         let scaled_logits: Vec<f32> = if self.config.temperature != 1.0 {
-            logits.iter().map(|&l| l / self.config.temperature).collect()
+            logits
+                .iter()
+                .map(|&l| l / self.config.temperature)
+                .collect()
         } else {
             logits.to_vec()
         };
 
         // Compute softmax
-        let max_logit = scaled_logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-        let exp_logits: Vec<f32> = scaled_logits.iter().map(|&l| (l - max_logit).exp()).collect();
+        let max_logit = scaled_logits
+            .iter()
+            .cloned()
+            .fold(f32::NEG_INFINITY, f32::max);
+        let exp_logits: Vec<f32> = scaled_logits
+            .iter()
+            .map(|&l| (l - max_logit).exp())
+            .collect();
         let sum_exp: f32 = exp_logits.iter().sum();
         let probs: Vec<f32> = exp_logits.iter().map(|&e| e / sum_exp).collect();
 
@@ -241,12 +250,15 @@ mod tests {
 
     #[test]
     fn token_expander_selects_top_k() {
-        let expander = TokenExpander::new(10, TokenExpanderConfig {
-            max_children: 3,
-            min_prob: 0.0,
-            temperature: 1.0,
-            top_p: None,
-        });
+        let expander = TokenExpander::new(
+            10,
+            TokenExpanderConfig {
+                max_children: 3,
+                min_prob: 0.0,
+                temperature: 1.0,
+                top_p: None,
+            },
+        );
 
         // Logits where token 5 is highest, then 3, then 7
         let logits = [0.0, 0.0, 0.0, 2.0, 0.0, 5.0, 0.0, 1.5, 0.0, 0.0];
@@ -261,12 +273,15 @@ mod tests {
 
     #[test]
     fn token_expander_respects_min_prob() {
-        let expander = TokenExpander::new(10, TokenExpanderConfig {
-            max_children: 10,
-            min_prob: 0.1,
-            temperature: 1.0,
-            top_p: None,
-        });
+        let expander = TokenExpander::new(
+            10,
+            TokenExpanderConfig {
+                max_children: 10,
+                min_prob: 0.1,
+                temperature: 1.0,
+                top_p: None,
+            },
+        );
 
         // Only one very high logit, rest are very low
         let mut logits = [-10.0f32; 10];
@@ -281,19 +296,25 @@ mod tests {
 
     #[test]
     fn token_expander_applies_temperature() {
-        let hot_expander = TokenExpander::new(10, TokenExpanderConfig {
-            max_children: 10,
-            min_prob: 0.0,
-            temperature: 2.0, // High temperature = more uniform
-            top_p: None,
-        });
+        let hot_expander = TokenExpander::new(
+            10,
+            TokenExpanderConfig {
+                max_children: 10,
+                min_prob: 0.0,
+                temperature: 2.0, // High temperature = more uniform
+                top_p: None,
+            },
+        );
 
-        let cold_expander = TokenExpander::new(10, TokenExpanderConfig {
-            max_children: 10,
-            min_prob: 0.0,
-            temperature: 0.5, // Low temperature = more peaked
-            top_p: None,
-        });
+        let cold_expander = TokenExpander::new(
+            10,
+            TokenExpanderConfig {
+                max_children: 10,
+                min_prob: 0.0,
+                temperature: 0.5, // Low temperature = more peaked
+                top_p: None,
+            },
+        );
 
         let logits = [1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
@@ -307,12 +328,15 @@ mod tests {
 
     #[test]
     fn token_expander_applies_top_p() {
-        let expander = TokenExpander::new(10, TokenExpanderConfig {
-            max_children: 10,
-            min_prob: 0.0,
-            temperature: 1.0,
-            top_p: Some(0.5),
-        });
+        let expander = TokenExpander::new(
+            10,
+            TokenExpanderConfig {
+                max_children: 10,
+                min_prob: 0.0,
+                temperature: 1.0,
+                top_p: Some(0.5),
+            },
+        );
 
         // Roughly uniform logits
         let logits = [1.0f32; 10];

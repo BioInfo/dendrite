@@ -85,16 +85,19 @@ fn main() -> anyhow::Result<()> {
     // Generate with proper KV caching
     println!("\nGenerating with KV cache...");
     let gen_start = Instant::now();
-    let generated = tokio::runtime::Runtime::new()?.block_on(async {
-        transformer.generate(&prompt_tokens, 20, 0.0).await
-    })?;
+    let generated = tokio::runtime::Runtime::new()?
+        .block_on(async { transformer.generate(&prompt_tokens, 20, 0.0).await })?;
     let gen_time = gen_start.elapsed();
 
     let num_new_tokens = generated.len() - prompt_tokens.len();
     let tokens_per_sec = num_new_tokens as f64 / gen_time.as_secs_f64();
 
     println!("\nGeneration complete!");
-    println!("  Generated {} new tokens in {:.2}ms", num_new_tokens, gen_time.as_secs_f64() * 1000.0);
+    println!(
+        "  Generated {} new tokens in {:.2}ms",
+        num_new_tokens,
+        gen_time.as_secs_f64() * 1000.0
+    );
     println!("  Throughput: {:.1} tokens/s", tokens_per_sec);
     println!("\nGenerated token IDs: {:?}", generated);
 

@@ -274,6 +274,10 @@ mod tests {
 
         // Should be close to 2x compression (FP16 -> FP8)
         let ratio = quantized.compression_ratio();
-        assert!(ratio > 1.8, "Compression ratio should be ~2x, got {}", ratio);
+        assert!(
+            ratio > 1.8,
+            "Compression ratio should be ~2x, got {}",
+            ratio
+        );
     }
 }

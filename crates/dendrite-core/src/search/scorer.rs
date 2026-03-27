@@ -4,7 +4,6 @@
 //! - UCT (Upper Confidence Bound for Trees)
 //! - Custom scoring via trait
 
-
 /// Configuration for scorers.
 #[derive(Debug, Clone)]
 pub struct ScorerConfig {
@@ -88,7 +87,9 @@ pub trait Scorer: Send + Sync {
         indices.sort_by(|&a, &b| {
             let score_a = self.score(&children[a], parent_visits);
             let score_b = self.score(&children[b], parent_visits);
-            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            score_b
+                .partial_cmp(&score_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
         indices
     }
@@ -118,7 +119,9 @@ impl UctScorer {
 
     /// Create with custom exploration constant.
     pub fn with_exploration(exploration_constant: f64) -> Self {
-        Self { exploration_constant }
+        Self {
+            exploration_constant,
+        }
     }
 }
 
@@ -173,7 +176,10 @@ pub struct EpsilonGreedyScorer {
 impl EpsilonGreedyScorer {
     /// Create with epsilon value.
     pub fn new(epsilon: f64) -> Self {
-        Self { epsilon, random: 0.0 }
+        Self {
+            epsilon,
+            random: 0.0,
+        }
     }
 
     /// Set the random value for this scoring round.
@@ -230,7 +236,8 @@ impl PuctScorer {
             node_stats.mean_reward
         };
 
-        let u = self.c_puct * prior * (parent_visits as f64).sqrt() / (1.0 + node_stats.visits as f64);
+        let u =
+            self.c_puct * prior * (parent_visits as f64).sqrt() / (1.0 + node_stats.visits as f64);
 
         q + u
     }
@@ -327,11 +334,7 @@ mod tests {
     fn rank_children_sorts_by_score() {
         let scorer = GreedyScorer;
 
-        let mut children = vec![
-            NodeStats::new(),
-            NodeStats::new(),
-            NodeStats::new(),
-        ];
+        let mut children = vec![NodeStats::new(), NodeStats::new(), NodeStats::new()];
 
         children[0].update(0.3);
         children[1].update(0.9);

@@ -39,8 +39,10 @@ async fn main() -> anyhow::Result<()> {
             8,   // num_kv_heads (8 KV heads for GQA)
             128, // head_dim
         );
-        println!("Config: {} query heads, {} KV heads, {} head dim",
-            config.num_heads, config.num_kv_heads, config.head_dim);
+        println!(
+            "Config: {} query heads, {} KV heads, {} head dim",
+            config.num_heads, config.num_kv_heads, config.head_dim
+        );
         println!("GQA ratio: {}x\n", config.num_queries_per_kv());
 
         // Test prefill
@@ -52,45 +54,60 @@ async fn main() -> anyhow::Result<()> {
 
         // Flash attention requires f16 or bf16
         let query = Tensor::randn(
-            0f32, 1.0,
+            0f32,
+            1.0,
             &[batch_size, config.num_heads, seq_len, config.head_dim],
             &device,
-        )?.to_dtype(DType::F16)?;
+        )?
+        .to_dtype(DType::F16)?;
         let key = Tensor::randn(
-            0f32, 1.0,
+            0f32,
+            1.0,
             &[batch_size, config.num_kv_heads, seq_len, config.head_dim],
             &device,
-        )?.to_dtype(DType::F16)?;
+        )?
+        .to_dtype(DType::F16)?;
         let value = Tensor::randn(
-            0f32, 1.0,
+            0f32,
+            1.0,
             &[batch_size, config.num_kv_heads, seq_len, config.head_dim],
             &device,
-        )?.to_dtype(DType::F16)?;
+        )?
+        .to_dtype(DType::F16)?;
         let block_table = BlockTable::new(16);
 
         // Warm-up
-        let _ = backend.prefill(&query, &key, &value, &block_table, &config).await?;
+        let _ = backend
+            .prefill(&query, &key, &value, &block_table, &config)
+            .await?;
 
         // Benchmark
         let iterations = 10;
         let start = Instant::now();
         for _ in 0..iterations {
-            let _ = backend.prefill(&query, &key, &value, &block_table, &config).await?;
+            let _ = backend
+                .prefill(&query, &key, &value, &block_table, &config)
+                .await?;
         }
         let elapsed = start.elapsed();
         let avg_ms = elapsed.as_secs_f64() * 1000.0 / iterations as f64;
 
         println!("  Sequence length: {}", seq_len);
         println!("  Average prefill time: {:.3} ms", avg_ms);
-        println!("  Throughput: {:.1} tokens/s\n", seq_len as f64 / (avg_ms / 1000.0));
+        println!(
+            "  Throughput: {:.1} tokens/s\n",
+            seq_len as f64 / (avg_ms / 1000.0)
+        );
 
         // Test decode
         println!("Testing decode...");
         let decode_query = Tensor::randn(
-            0f32, 1.0,
+            0f32,
+            1.0,
             &[batch_size, config.num_heads, 1, config.head_dim],
             &device,
-        )?.to_dtype(DType::F16)?;
+        )?
+        .to_dtype(DType::F16)?;
 
         // Store some KV in cache for decode
         use dendrite_core::cache::BlockId;

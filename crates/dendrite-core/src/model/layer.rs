@@ -44,12 +44,7 @@ impl Attention {
         head_dim: usize,
         device: &Device,
     ) -> Result<Self> {
-        let q_proj = Tensor::randn(
-            0.0f32,
-            0.02,
-            &[num_heads * head_dim, hidden_size],
-            device,
-        )?;
+        let q_proj = Tensor::randn(0.0f32, 0.02, &[num_heads * head_dim, hidden_size], device)?;
         let k_proj = Tensor::randn(
             0.0f32,
             0.02,
@@ -62,12 +57,7 @@ impl Attention {
             &[num_kv_heads * head_dim, hidden_size],
             device,
         )?;
-        let o_proj = Tensor::randn(
-            0.0f32,
-            0.02,
-            &[hidden_size, num_heads * head_dim],
-            device,
-        )?;
+        let o_proj = Tensor::randn(0.0f32, 0.02, &[hidden_size, num_heads * head_dim], device)?;
 
         Ok(Self {
             q_proj,
@@ -517,9 +507,8 @@ mod tests {
         let num_kv_heads = 2;
         let head_dim = 64;
 
-        let attn =
-            Attention::random(hidden_size, num_heads, num_kv_heads, head_dim, &Device::Cpu)
-                .unwrap();
+        let attn = Attention::random(hidden_size, num_heads, num_kv_heads, head_dim, &Device::Cpu)
+            .unwrap();
 
         // [batch=2, seq=8, hidden=256]
         let x = Tensor::randn(0.0f32, 1.0, &[2, 8, 256], &Device::Cpu).unwrap();
@@ -537,9 +526,8 @@ mod tests {
         let num_kv_heads = 2;
         let head_dim = 64;
 
-        let attn =
-            Attention::random(hidden_size, num_heads, num_kv_heads, head_dim, &Device::Cpu)
-                .unwrap();
+        let attn = Attention::random(hidden_size, num_heads, num_kv_heads, head_dim, &Device::Cpu)
+            .unwrap();
 
         // Simulated attention output: [batch, num_heads, seq, head_dim]
         let attn_output = Tensor::randn(0.0f32, 1.0, &[2, 4, 8, 64], &Device::Cpu).unwrap();

@@ -122,13 +122,13 @@ pub use error::{DendriteError, Result};
 /// Re-export commonly used types
 pub mod prelude {
     pub use crate::attention::AttentionBackend;
-    pub use crate::cache::{Block, BlockTable, KvCache, RadixTree, PageFormat};
+    pub use crate::cache::{Block, BlockTable, KvCache, PageFormat, RadixTree};
     pub use crate::error::{DendriteError, Result};
-    pub use crate::quantization::{unpack_4bit, unpack_2bit};
+    pub use crate::quantization::{unpack_2bit, unpack_4bit};
     pub use crate::scheduler::{BatchConfig, Request, Scheduler};
     pub use crate::search::{
-        BeamConfig, BeamSearch, MctsConfig, MctsSearch, Scorer, UctScorer,
-        TreeMcts, TreeBeam, TreeSearchContext,
+        BeamConfig, BeamSearch, MctsConfig, MctsSearch, Scorer, TreeBeam, TreeMcts,
+        TreeSearchContext, UctScorer,
     };
     pub use crate::tree::{ForkHandle, TreeNode, TreeState};
 }

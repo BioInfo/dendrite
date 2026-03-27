@@ -171,7 +171,10 @@ impl WeightLoader {
 
         // Convert to F32 for consistent computation
         // BF16/F16 weights need to be converted for operations like RoPE
-        let tensor = if tensor.dtype() != DType::F32 && tensor.dtype() != DType::I64 && tensor.dtype() != DType::U32 {
+        let tensor = if tensor.dtype() != DType::F32
+            && tensor.dtype() != DType::I64
+            && tensor.dtype() != DType::U32
+        {
             tensor.to_dtype(DType::F32)?
         } else {
             tensor.clone()
@@ -242,10 +245,7 @@ mod tests {
 
     #[test]
     fn hf_name_mapping() {
-        assert_eq!(
-            map_hf_name("model.embed_tokens.weight"),
-            "embed_tokens"
-        );
+        assert_eq!(map_hf_name("model.embed_tokens.weight"), "embed_tokens");
         assert_eq!(
             map_hf_name("model.layers.0.self_attn.q_proj.weight"),
             "layers.0.attn.q_proj"

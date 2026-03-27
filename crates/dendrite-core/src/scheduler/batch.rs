@@ -159,7 +159,11 @@ mod tests {
     #[test]
     fn mixed_batch_combines_both() {
         let prefill = vec![create_test_request(10), create_test_request(15)];
-        let decode = vec![create_test_request(5), create_test_request(5), create_test_request(5)];
+        let decode = vec![
+            create_test_request(5),
+            create_test_request(5),
+            create_test_request(5),
+        ];
 
         let batch = Batch::mixed(prefill, decode);
 

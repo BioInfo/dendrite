@@ -176,7 +176,9 @@ fn bench_branch_creation(c: &mut Criterion) {
 
                         // Simulating O(n) copy of prefix
                         for i in 0..config.prefix_tokens {
-                            state.append_token(branch.node_id, black_box(i as u32)).unwrap();
+                            state
+                                .append_token(branch.node_id, black_box(i as u32))
+                                .unwrap();
                         }
                     }
                 })
@@ -202,16 +204,12 @@ fn bench_beam_search_memory(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*beam_width as u64));
 
         // Tree-structured beam
-        group.bench_with_input(
-            BenchmarkId::new("tree", beam_width),
-            beam_width,
-            |b, _| {
-                b.iter(|| {
-                    let (fork_blocks, total_blocks) = tree_branch_simulation(&config);
-                    black_box((fork_blocks, total_blocks))
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("tree", beam_width), beam_width, |b, _| {
+            b.iter(|| {
+                let (fork_blocks, total_blocks) = tree_branch_simulation(&config);
+                black_box((fork_blocks, total_blocks))
+            })
+        });
     }
 
     group.finish();
@@ -337,8 +335,8 @@ fn bench_tree_of_thought(c: &mut Criterion) {
 
     // Simulate: problem (1K tokens) -> 3 thoughts -> 3 evaluations each
     let config = BenchConfig {
-        prefix_tokens: 1024,  // Problem statement
-        num_branches: 3,       // Thoughts
+        prefix_tokens: 1024,    // Problem statement
+        num_branches: 3,        // Thoughts
         tokens_per_branch: 512, // Reasoning per thought
         ..Default::default()
     };
@@ -359,7 +357,9 @@ fn bench_tree_of_thought(c: &mut Criterion) {
             for t in 0..3 {
                 let thought = state.fork(problem.node_id).unwrap();
                 for i in 0..config.tokens_per_branch {
-                    state.append_token(thought.node_id, (t * 1000 + i) as u32).unwrap();
+                    state
+                        .append_token(thought.node_id, (t * 1000 + i) as u32)
+                        .unwrap();
                 }
                 thoughts.push(thought);
             }

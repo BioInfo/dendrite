@@ -39,7 +39,10 @@ fn main() -> anyhow::Result<()> {
     // Load config
     let config_path = model_path.join("config.json");
     let config = ModelConfig::from_file(&config_path)?;
-    println!("\nModel: {} layers, {} hidden", config.num_hidden_layers, config.hidden_size);
+    println!(
+        "\nModel: {} layers, {} hidden",
+        config.num_hidden_layers, config.hidden_size
+    );
 
     // Create device and backend
     #[cfg(feature = "cuda")]

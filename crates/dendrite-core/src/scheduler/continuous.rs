@@ -151,10 +151,7 @@ impl ContinuousBatcher {
         let decode_tokens = decode_requests.len();
 
         // ── Step 2: compute remaining token budget for prefill ────────────────
-        let prefill_budget = self
-            .config
-            .max_total_tokens
-            .saturating_sub(decode_tokens);
+        let prefill_budget = self.config.max_total_tokens.saturating_sub(decode_tokens);
         let chunk_size = if self.config.chunked_prefill {
             self.config.chunk_size.min(prefill_budget)
         } else {

@@ -103,11 +103,7 @@ impl GoldenCase {
     /// Create a case from token strings (for readability).
     ///
     /// Tokens are space-separated decimal numbers.
-    pub fn from_str(
-        name: impl Into<String>,
-        input: &str,
-        expected: &str,
-    ) -> Self {
+    pub fn from_str(name: impl Into<String>, input: &str, expected: &str) -> Self {
         let parse_tokens = |s: &str| -> Vec<u32> {
             s.split_whitespace()
                 .filter_map(|t| t.parse().ok())
@@ -168,9 +164,7 @@ impl GoldenResult {
     /// Create a passed result.
     pub fn passed(name: String, expected: Vec<u32>, actual: Vec<u32>, time_ms: f64) -> Self {
         let len = expected.len().min(actual.len());
-        let token_matches: Vec<bool> = (0..len)
-            .map(|i| expected[i] == actual[i])
-            .collect();
+        let token_matches: Vec<bool> = (0..len).map(|i| expected[i] == actual[i]).collect();
 
         Self {
             name,
@@ -185,12 +179,7 @@ impl GoldenResult {
     }
 
     /// Create a failed result.
-    pub fn failed(
-        name: String,
-        expected: Vec<u32>,
-        actual: Vec<u32>,
-        time_ms: f64,
-    ) -> Self {
+    pub fn failed(name: String, expected: Vec<u32>, actual: Vec<u32>, time_ms: f64) -> Self {
         let len = expected.len().max(actual.len());
         let mut token_matches = Vec::with_capacity(len);
         let mut first_divergence = None;
@@ -207,8 +196,14 @@ impl GoldenResult {
         }
 
         let error = if let Some(idx) = first_divergence {
-            let exp = expected.get(idx).map(|t| format!("{}", t)).unwrap_or_else(|| "EOF".to_string());
-            let act = actual.get(idx).map(|t| format!("{}", t)).unwrap_or_else(|| "EOF".to_string());
+            let exp = expected
+                .get(idx)
+                .map(|t| format!("{}", t))
+                .unwrap_or_else(|| "EOF".to_string());
+            let act = actual
+                .get(idx)
+                .map(|t| format!("{}", t))
+                .unwrap_or_else(|| "EOF".to_string());
             Some(format!(
                 "Divergence at index {}: expected {}, got {}",
                 idx, exp, act
@@ -263,11 +258,7 @@ impl fmt::Display for GoldenResult {
                 write!(f, "\n  Error: {}", err)?;
             }
             if self.first_divergence.is_some() {
-                write!(
-                    f,
-                    "\n  Match rate: {:.1}%",
-                    self.match_percentage()
-                )?;
+                write!(f, "\n  Match rate: {:.1}%", self.match_percentage())?;
             }
         }
 
@@ -298,10 +289,8 @@ impl GoldenSummary {
         let failed = total - passed;
         let total_time_ms = results.iter().map(|r| r.time_ms).sum();
 
-        let results_map: HashMap<String, GoldenResult> = results
-            .into_iter()
-            .map(|r| (r.name.clone(), r))
-            .collect();
+        let results_map: HashMap<String, GoldenResult> =
+            results.into_iter().map(|r| (r.name.clone(), r)).collect();
 
         Self {
             total,
@@ -331,8 +320,16 @@ impl fmt::Display for GoldenSummary {
         writeln!(f, "Golden Test Summary")?;
         writeln!(f, "===================")?;
         writeln!(f, "Total:  {}", self.total)?;
-        writeln!(f, "Passed: {} ({:.1}%)", self.passed,
-            if self.total > 0 { (self.passed as f32 / self.total as f32) * 100.0 } else { 0.0 })?;
+        writeln!(
+            f,
+            "Passed: {} ({:.1}%)",
+            self.passed,
+            if self.total > 0 {
+                (self.passed as f32 / self.total as f32) * 100.0
+            } else {
+                0.0
+            }
+        )?;
         writeln!(f, "Failed: {} ({:.1}%)", self.failed, self.failure_rate())?;
         writeln!(f, "Time:   {:.1}ms", self.total_time_ms)?;
 
@@ -403,19 +400,9 @@ impl GoldenTestHarness {
         let expected = &case.expected_tokens;
 
         if expected == actual {
-            GoldenResult::passed(
-                case.name.clone(),
-                expected.clone(),
-                actual.to_vec(),
-                0.0,
-            )
+            GoldenResult::passed(case.name.clone(), expected.clone(), actual.to_vec(), 0.0)
         } else {
-            GoldenResult::failed(
-                case.name.clone(),
-                expected.clone(),
-                actual.to_vec(),
-                0.0,
-            )
+            GoldenResult::failed(case.name.clone(), expected.clone(), actual.to_vec(), 0.0)
         }
     }
 
@@ -425,25 +412,12 @@ impl GoldenTestHarness {
     pub fn compare_prefix(&self, case: &GoldenCase, actual: &[u32]) -> GoldenResult {
         let expected = &case.expected_tokens;
 
-        let prefix_matches = actual
-            .iter()
-            .zip(expected.iter())
-            .all(|(a, e)| a == e);
+        let prefix_matches = actual.iter().zip(expected.iter()).all(|(a, e)| a == e);
 
         if prefix_matches && actual.len() >= expected.len() {
-            GoldenResult::passed(
-                case.name.clone(),
-                expected.clone(),
-                actual.to_vec(),
-                0.0,
-            )
+            GoldenResult::passed(case.name.clone(), expected.clone(), actual.to_vec(), 0.0)
         } else {
-            GoldenResult::failed(
-                case.name.clone(),
-                expected.clone(),
-                actual.to_vec(),
-                0.0,
-            )
+            GoldenResult::failed(case.name.clone(), expected.clone(), actual.to_vec(), 0.0)
         }
     }
 
@@ -524,8 +498,7 @@ pub trait GoldenTestable {
     /// Run golden tests against this model.
     fn run_golden_tests(&mut self, harness: &GoldenTestHarness) -> GoldenSummary {
         harness.run_with(|input, max_tokens| {
-            self.generate(input, max_tokens)
-                .map_err(|e| e.to_string())
+            self.generate(input, max_tokens).map_err(|e| e.to_string())
         })
     }
 }
@@ -562,12 +535,7 @@ mod tests {
 
     #[test]
     fn golden_result_passed() {
-        let result = GoldenResult::passed(
-            "test".to_string(),
-            vec![1, 2, 3],
-            vec![1, 2, 3],
-            10.0,
-        );
+        let result = GoldenResult::passed("test".to_string(), vec![1, 2, 3], vec![1, 2, 3], 10.0);
 
         assert!(result.passed);
         assert!(result.error.is_none());
@@ -579,7 +547,7 @@ mod tests {
         let result = GoldenResult::failed(
             "test".to_string(),
             vec![1, 2, 3],
-            vec![1, 9, 3],  // Different at index 1
+            vec![1, 9, 3], // Different at index 1
             10.0,
         );
 
@@ -593,7 +561,7 @@ mod tests {
         let result = GoldenResult::failed(
             "test".to_string(),
             vec![1, 2, 3],
-            vec![1, 2],  // Too short
+            vec![1, 2], // Too short
             10.0,
         );
 
@@ -658,14 +626,8 @@ mod tests {
     fn golden_harness_filter_by_tag() {
         let mut harness = GoldenTestHarness::new();
 
-        harness.add_case(
-            GoldenCase::greedy("test1", vec![], vec![])
-                .with_tag("regression"),
-        );
-        harness.add_case(
-            GoldenCase::greedy("test2", vec![], vec![])
-                .with_tag("basic"),
-        );
+        harness.add_case(GoldenCase::greedy("test1", vec![], vec![]).with_tag("regression"));
+        harness.add_case(GoldenCase::greedy("test2", vec![], vec![]).with_tag("basic"));
         harness.add_case(
             GoldenCase::greedy("test3", vec![], vec![])
                 .with_tag("regression")
@@ -713,12 +675,7 @@ mod tests {
 
     #[test]
     fn golden_result_display() {
-        let result = GoldenResult::passed(
-            "test".to_string(),
-            vec![1, 2, 3],
-            vec![1, 2, 3],
-            5.5,
-        );
+        let result = GoldenResult::passed("test".to_string(), vec![1, 2, 3], vec![1, 2, 3], 5.5);
 
         let display = format!("{}", result);
         assert!(display.contains("PASS"));

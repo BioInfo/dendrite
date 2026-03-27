@@ -12,9 +12,7 @@
 
 use candle_core::Device;
 use dendrite_core::attention::ReferenceBackend;
-use dendrite_core::model::{
-    GoldenCase, GoldenTestHarness, ModelConfig, Tokenizer, Transformer,
-};
+use dendrite_core::model::{GoldenCase, GoldenTestHarness, ModelConfig, Tokenizer, Transformer};
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;
@@ -50,7 +48,9 @@ fn main() -> anyhow::Result<()> {
     if args.len() < 3 {
         eprintln!("Usage: golden_validation <model_dir> <golden_cases.json>");
         eprintln!("\nGenerate golden cases with:");
-        eprintln!("  python scripts/generate_golden.py --model <model_dir> --output golden_cases.json");
+        eprintln!(
+            "  python scripts/generate_golden.py --model <model_dir> --output golden_cases.json"
+        );
         std::process::exit(1);
     }
 
@@ -180,10 +180,7 @@ fn main() -> anyhow::Result<()> {
         println!("\nAll golden tests passed!");
         Ok(())
     } else {
-        eprintln!(
-            "\n{} of {} tests failed",
-            summary.failed, summary.total
-        );
+        eprintln!("\n{} of {} tests failed", summary.failed, summary.total);
         std::process::exit(1);
     }
 }

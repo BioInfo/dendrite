@@ -318,9 +318,18 @@ mod tests {
         assert_eq!(h3.depth, 1);
 
         // All should have ROOT as parent
-        assert_eq!(state.get_node(h1.node_id).unwrap().parent, Some(NodeId::ROOT));
-        assert_eq!(state.get_node(h2.node_id).unwrap().parent, Some(NodeId::ROOT));
-        assert_eq!(state.get_node(h3.node_id).unwrap().parent, Some(NodeId::ROOT));
+        assert_eq!(
+            state.get_node(h1.node_id).unwrap().parent,
+            Some(NodeId::ROOT)
+        );
+        assert_eq!(
+            state.get_node(h2.node_id).unwrap().parent,
+            Some(NodeId::ROOT)
+        );
+        assert_eq!(
+            state.get_node(h3.node_id).unwrap().parent,
+            Some(NodeId::ROOT)
+        );
 
         // Root should have 3 children
         assert_eq!(state.get_node(NodeId::ROOT).unwrap().num_children, 3);

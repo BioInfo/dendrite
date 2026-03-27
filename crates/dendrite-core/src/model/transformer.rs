@@ -176,14 +176,16 @@ impl Transformer {
 
         // Load optional Q/K normalization (Qwen3)
         let q_norm = if loader.contains(&format!("{}.self_attn.q_norm.weight", prefix)) {
-            let q_norm_weight = loader.get_tensor(&format!("{}.self_attn.q_norm.weight", prefix))?;
+            let q_norm_weight =
+                loader.get_tensor(&format!("{}.self_attn.q_norm.weight", prefix))?;
             Some(RmsNorm::new(q_norm_weight, self.config.rms_norm_eps)?)
         } else {
             None
         };
 
         let k_norm = if loader.contains(&format!("{}.self_attn.k_norm.weight", prefix)) {
-            let k_norm_weight = loader.get_tensor(&format!("{}.self_attn.k_norm.weight", prefix))?;
+            let k_norm_weight =
+                loader.get_tensor(&format!("{}.self_attn.k_norm.weight", prefix))?;
             Some(RmsNorm::new(k_norm_weight, self.config.rms_norm_eps)?)
         } else {
             None
@@ -209,8 +211,7 @@ impl Transformer {
         let mlp = super::SwiGluMlp::new(gate_proj, up_proj, down_proj)?;
 
         // Load layer norms
-        let input_norm_weight =
-            loader.get_tensor(&format!("{}.input_layernorm.weight", prefix))?;
+        let input_norm_weight = loader.get_tensor(&format!("{}.input_layernorm.weight", prefix))?;
         let input_layernorm = RmsNorm::new(input_norm_weight, self.config.rms_norm_eps)?;
 
         let post_attn_norm_weight =
@@ -492,7 +493,8 @@ impl Transformer {
         max_tokens: usize,
         temperature: f32,
     ) -> Result<Vec<u32>> {
-        self.generate_with_stop(prompt, max_tokens, temperature, None).await
+        self.generate_with_stop(prompt, max_tokens, temperature, None)
+            .await
     }
 
     /// Generate tokens with stop condition.
@@ -567,7 +569,12 @@ impl Transformer {
 
         // Generate with EOS as stop token
         let generated = self
-            .generate_with_stop(&prompt_tokens, max_tokens, temperature, tokenizer.eos_token_id())
+            .generate_with_stop(
+                &prompt_tokens,
+                max_tokens,
+                temperature,
+                tokenizer.eos_token_id(),
+            )
             .await?;
 
         // Decode back to text
@@ -601,7 +608,12 @@ impl Transformer {
 
         // Generate with EOS as stop token
         let generated = self
-            .generate_with_stop(&prompt_tokens, max_tokens, temperature, tokenizer.eos_token_id())
+            .generate_with_stop(
+                &prompt_tokens,
+                max_tokens,
+                temperature,
+                tokenizer.eos_token_id(),
+            )
             .await?;
 
         // Decode only the new tokens
@@ -746,7 +758,12 @@ mod tests {
         let transformer = Transformer::random(config.clone(), attention, Device::Cpu).unwrap();
 
         // Create input tokens: [batch=1, seq=8]
-        let input_ids = Tensor::from_slice(&[1u32, 42, 100, 200, 300, 400, 500, 600], (1, 8), &Device::Cpu).unwrap();
+        let input_ids = Tensor::from_slice(
+            &[1u32, 42, 100, 200, 300, 400, 500, 600],
+            (1, 8),
+            &Device::Cpu,
+        )
+        .unwrap();
 
         // Create block table (not used in this test, but required by API)
         let block_table = crate::cache::BlockTable::new(16);
@@ -758,7 +775,13 @@ mod tests {
         assert_eq!(logits.dims(), &[1, 8, 1000]);
 
         // Verify logits are not all zeros (random weights should produce non-zero output)
-        let sum: f32 = logits.abs().unwrap().sum_all().unwrap().to_scalar().unwrap();
+        let sum: f32 = logits
+            .abs()
+            .unwrap()
+            .sum_all()
+            .unwrap()
+            .to_scalar()
+            .unwrap();
         assert!(sum > 0.0, "Logits should not be all zeros");
     }
 
@@ -773,7 +796,10 @@ mod tests {
         let block_table = crate::cache::BlockTable::new(16);
 
         // Run decode at position 10 (simulating continued generation)
-        let logits = transformer.decode(&input_ids, &block_table, 10).await.unwrap();
+        let logits = transformer
+            .decode(&input_ids, &block_table, 10)
+            .await
+            .unwrap();
 
         // Verify output shape: [batch=1, seq=1, vocab=1000]
         assert_eq!(logits.dims(), &[1, 1, 1000]);
@@ -825,7 +851,10 @@ mod tests {
             let logits = if i == 0 {
                 transformer.prefill(&input, &block_table).await.unwrap()
             } else {
-                transformer.decode(&input, &block_table, generated.len() - 1).await.unwrap()
+                transformer
+                    .decode(&input, &block_table, generated.len() - 1)
+                    .await
+                    .unwrap()
             };
 
             let next_token = transformer.sample(&logits, 0.0).unwrap();
@@ -848,11 +877,8 @@ mod tests {
         let transformer = Transformer::random(config.clone(), attention, Device::Cpu).unwrap();
 
         // Create batched input: [batch=2, seq=4]
-        let input_ids = Tensor::from_slice(
-            &[1u32, 2, 3, 4, 10, 20, 30, 40],
-            (2, 4),
-            &Device::Cpu,
-        ).unwrap();
+        let input_ids =
+            Tensor::from_slice(&[1u32, 2, 3, 4, 10, 20, 30, 40], (2, 4), &Device::Cpu).unwrap();
         let block_table = crate::cache::BlockTable::new(16);
 
         let logits = transformer.prefill(&input_ids, &block_table).await.unwrap();

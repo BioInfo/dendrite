@@ -26,8 +26,10 @@
 //! ```
 
 use crate::error::{DendriteError, Result};
-use crate::grammar::{tokenizer_bridge::build_tok_env, to_llguidance, Grammar, LlgConstraint, ParserFactory};
 use crate::grammar::mask::TokenMask;
+use crate::grammar::{
+    to_llguidance, tokenizer_bridge::build_tok_env, Grammar, LlgConstraint, ParserFactory,
+};
 use crate::model::Tokenizer;
 use llguidance::CommitResult;
 
@@ -153,9 +155,7 @@ impl ConstrainedDecoder {
 
         let commit_result = self.constraint.commit_token(Some(token)).map_err(|e| {
             self.state = DecoderState::Error;
-            DendriteError::ModelError(format!(
-                "Grammar constraint violated at token {token}: {e}"
-            ))
+            DendriteError::ModelError(format!("Grammar constraint violated at token {token}: {e}"))
         })?;
 
         let is_stop = commit_is_stop(commit_result);
@@ -215,7 +215,8 @@ mod tests {
             "required": ["name"]
         }"#;
 
-        let mut decoder = ConstrainedDecoder::new(&tokenizer, Grammar::json_schema(schema)).unwrap();
+        let mut decoder =
+            ConstrainedDecoder::new(&tokenizer, Grammar::json_schema(schema)).unwrap();
         assert_eq!(*decoder.state(), DecoderState::Active);
 
         let mask = decoder.token_mask().unwrap();
