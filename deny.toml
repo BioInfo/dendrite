@@ -31,7 +31,7 @@ allow = [
 confidence-threshold = 0.8
 
 [bans]
-multiple-versions = "warn"
+multiple-versions = "allow"  # thiserror v1+v2 coexist via transitive deps
 wildcards = "allow"  # Internal project, not published to crates.io
 highlight = "all"
 deny = []
