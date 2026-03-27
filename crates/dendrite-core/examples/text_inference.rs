@@ -23,7 +23,7 @@ fn main() -> anyhow::Result<()> {
     let model_dir = args
         .get(1)
         .map(|s| s.as_str())
-        .unwrap_or("/home/bioinfo/models/tinyllama-1.1b");
+        .unwrap_or("/path/to/your/model");
     let model_path = Path::new(model_dir);
 
     println!("Text Inference Example");

@@ -104,6 +104,22 @@ impl TokenMask {
         }
     }
 
+    /// Create a mask from llguidance's byte-packed bit vector.
+    ///
+    /// llguidance returns masks as a byte array where bit `i` in byte `i/8`
+    /// indicates whether token `i` is allowed (1 = allowed, 0 = blocked).
+    pub fn from_llg_bytes(vocab_size: usize, bytes: &[u8]) -> Self {
+        let mut mask_self = Self::block_all(vocab_size);
+        for token_id in 0..vocab_size {
+            let byte_idx = token_id / 8;
+            let bit_idx = token_id % 8;
+            if byte_idx < bytes.len() && (bytes[byte_idx] >> bit_idx) & 1 == 1 {
+                mask_self.allow(token_id as u32);
+            }
+        }
+        mask_self
+    }
+
     /// Iterate over allowed tokens.
     pub fn allowed_tokens(&self) -> impl Iterator<Item = u32> + '_ {
         (0..self.vocab_size as u32).filter(|&t| self.is_allowed(t))

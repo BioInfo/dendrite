@@ -19,6 +19,7 @@
 //! ```
 
 use dendrite_core::grammar::{Grammar, GrammarConstraint};
+// ConstrainedDecoder is the production API (requires tokenizer); shown in printed example below
 
 /// Example JSON schemas for different use cases.
 mod schemas {
@@ -253,13 +254,19 @@ fn main() {
     println!("═══════════════════════════════════════════════");
     println!("Key Concepts:");
     println!("  • Grammar: Defines valid output structure (JSON schema, regex, CFG)");
-    println!("  • Constraint: Tracks state and computes valid token masks");
-    println!("  • Fork: Creates independent copies for tree search");
-    println!("  • Mask: Filters logits to only allow valid continuations");
+    println!("  • GrammarConstraint: Lightweight constraint without tokenizer (for testing/search)");
+    println!("  • ConstrainedDecoder: Production API — full llguidance integration");
+    println!("  • TokenMask: Bit-vector of allowed tokens, applied to logits");
+    println!("  • Fork: Creates independent copies for tree search (beam/MCTS)");
     println!();
-    println!("For full integration with llguidance:");
-    println!("  1. Load tokenizer to create TokEnv");
-    println!("  2. Create ParserFactory from TokEnv");
-    println!("  3. Use LlgConstraint for actual grammar enforcement");
+    println!("Production usage (with loaded tokenizer):");
+    println!("  let mut dec = ConstrainedDecoder::new(&tokenizer, Grammar::json_schema(schema))?;");
+    println!("  loop {{");
+    println!("      let mask = dec.token_mask()?;           // grammar-constrained bit-vector");
+    println!("      let logits = model.forward(&tokens)?;   // model forward pass");
+    println!("      mask.apply_to_logits(&mut logits);      // block invalid tokens (-inf)");
+    println!("      let tok = sample(&logits);              // sample from distribution");
+    println!("      if dec.advance(tok)? {{ break; }}        // commit + check completion");
+    println!("  }}");
     println!("═══════════════════════════════════════════════");
 }

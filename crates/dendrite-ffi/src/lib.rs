@@ -11,6 +11,7 @@
 
 pub mod error;
 pub mod flashinfer;
+pub mod te_ffi;
 
 #[cfg(feature = "cuda")]
 pub mod cuda;
