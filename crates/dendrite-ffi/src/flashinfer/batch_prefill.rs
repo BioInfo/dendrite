@@ -1,3 +1,4 @@
+#![allow(clippy::manual_is_multiple_of)]
 //! Batch prefill attention kernel.
 
 use crate::error::{FfiError, Result};
@@ -41,7 +42,7 @@ impl BatchPrefillKernel {
             )));
         }
 
-        if !config.num_qo_heads.is_multiple_of(&config.num_kv_heads) {
+        if config.num_qo_heads % config.num_kv_heads != 0 {
             return Err(FfiError::InvalidArgument(
                 "num_qo_heads must be divisible by num_kv_heads".into(),
             ));
