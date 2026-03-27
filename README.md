@@ -72,10 +72,21 @@ Memory is duplicated **only when branches diverge** and **only at block granular
 | Beam Search | ✅ Complete | Top-k beams |
 | Grammar Constraints | ✅ Complete | llguidance integration |
 | GPU Inference | ✅ Complete | candle-flash-attn |
+| TurboQuant KV Compression | ✅ Complete | 3.88x cache compression (2-4 bit) |
+| Prefix Cache | ✅ Complete | Cascade attention block reuse via RadixTree |
+| Qwen3 Support | ✅ Complete | QK normalization + weight loading |
 | FP8 Quantization | 🔄 In Progress | E4M3/E5M2/MXFP8 |
 | FlashInfer FFI | 🔄 In Progress | Paged attention kernels |
 
-**272 tests passing** | **40.8 tok/s** on NVIDIA GB10 (DGX Spark) with TinyLlama-1.1B
+**278 tests passing** | **40.8 tok/s** on NVIDIA GB10 (DGX Spark) with TinyLlama-1.1B
+
+### TurboQuant Integration
+
+Dendrite integrates [TurboQuant](https://github.com/BioInfo/turboquant-dgx) for KV cache compression, enabling 3.88x memory reduction. Unlike HuggingFace transformers (which forces dequantization at every attention call, making it 3.7x *slower*), Dendrite operates directly on quantized indices via `PageFormat::TurboQuant4Bit`.
+
+- Qwen3-32B at 1M token context on 128GB GPU (impossible at FP16)
+- Validated across Qwen3-0.6B through 32B and Mistral-7B
+- See the [full write-up](https://ai.rundatarun.io) for 1,000-experiment results
 
 ## Architecture
 
