@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 //! TurboQuant KV cache compression.
 //!
 //! Implements the two-stage compression pipeline from TurboQuant (Google, 2026):
@@ -36,8 +37,6 @@
 //! - QJL residual: ceil(128 × 1 / 8) = 16 bytes
 //! - Total: 82 bytes per head-vector  (~3.1x vs raw FP16 alone; paper achieves
 //!   6x by combining multiple heads and using a more compact magnitude encoding)
-
-use std::f32::consts::PI;
 
 // ── Trait ─────────────────────────────────────────────────────────────────────
 
@@ -131,7 +130,7 @@ impl PolarQuantCompressor {
     fn pack(&self, indices: &[u32]) -> Vec<u8> {
         let bits = self.bits as usize;
         let total_bits = indices.len() * bits;
-        let mut out = vec![0u8; (total_bits + 7) / 8];
+        let mut out = vec![0u8; total_bits.div_ceil(8)];
         for (i, &idx) in indices.iter().enumerate() {
             let bit_pos = i * bits;
             let byte_pos = bit_pos / 8;
@@ -199,7 +198,7 @@ impl KvCompressor for PolarQuantCompressor {
 
     fn compressed_size(&self, head_dim: usize) -> usize {
         // packed bits + 4 bytes for norm (f32)
-        (head_dim * self.bits as usize + 7) / 8 + 4
+        (head_dim * self.bits as usize).div_ceil(8) + 4
     }
 }
 
@@ -281,7 +280,7 @@ impl QjlCompressor {
 
     /// Pack sign bits into bytes.
     fn pack_signs(signs: &[bool]) -> Vec<u8> {
-        let mut out = vec![0u8; (signs.len() + 7) / 8];
+        let mut out = vec![0u8; signs.len().div_ceil(8)];
         for (i, &s) in signs.iter().enumerate() {
             if s {
                 out[i / 8] |= 1 << (i % 8);
@@ -328,7 +327,7 @@ impl KvCompressor for QjlCompressor {
     }
 
     fn compressed_size(&self, _head_dim: usize) -> usize {
-        (self.proj_dim + 7) / 8 + 4 // sign bits + norm
+        self.proj_dim.div_ceil(8) + 4 // sign bits + norm
     }
 }
 

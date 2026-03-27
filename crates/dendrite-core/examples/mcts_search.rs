@@ -81,7 +81,7 @@ fn main() {
             let expansion = ExpansionResult {
                 children: Vec::new(),
                 actions: vec![0, 1, 2],
-                log_probs: Some(logits.iter().copied().collect()),
+                log_probs: Some(logits.to_vec()),
                 priors: Some(vec![0.33, 0.33, 0.34]),
             };
 

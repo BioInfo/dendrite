@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 //! FP8-quantized transformer layer components.
 //!
 //! Provides drop-in FP8 replacements for [`Attention`] and [`SwiGluMlp`]
@@ -28,6 +29,7 @@ use candle_core::Tensor;
 /// Same interface as [`Attention`](super::Attention) but stores Q/K/V/O
 /// projections as MXFP8-compressed `Fp8Linear` layers.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Fp8Attention {
     q_proj: Fp8Linear,
     k_proj: Fp8Linear,
@@ -175,6 +177,7 @@ impl Fp8Attention {
 /// Same interface as [`SwiGluMlp`](super::SwiGluMlp) but stores
 /// gate/up/down projections as MXFP8 `Fp8Linear` layers.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Fp8SwiGluMlp {
     gate_proj: Fp8Linear,
     up_proj: Fp8Linear,

@@ -19,10 +19,9 @@
 //! ```
 
 use candle_core::{Device, Tensor};
-use dendrite_core::attention::{AttentionConfig, ReferenceBackend};
-use dendrite_core::cache::{KvCacheConfig, PageFormat, PagePool};
+use dendrite_core::attention::ReferenceBackend;
+use dendrite_core::cache::PageFormat;
 use dendrite_core::model::{ModelConfig, Transformer};
-use dendrite_core::quantization::{unpack_2bit, unpack_4bit};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
@@ -281,7 +280,7 @@ fn demonstrate_turboquant_pages(device: &Device, head_dim: usize) -> anyhow::Res
     let mut packed_2bit_data = Vec::new();
     for _ in 0..2 * kv_heads * page_size * packed_2bit_dim {
         // Pack 4 2-bit values: (a << 6) | (b << 4) | (c << 2) | d
-        let byte = (0x03 << 6) | (0x02 << 4) | (0x01 << 2) | 0x00;
+        let byte = (0x03 << 6) | (0x02 << 4) | (0x01 << 2);
         packed_2bit_data.push(byte);
     }
 

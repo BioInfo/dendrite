@@ -50,7 +50,7 @@ pub use fp8_linear::{quantize_attention_projs, Fp8Linear};
 pub use mxfp8::{quantize_weights_mxfp8, MxFp8Tensor, DEFAULT_BLOCK_SIZE};
 
 use crate::error::Result;
-use candle_core::{Device, Tensor};
+use candle_core::Tensor;
 
 /// Unpack 4-bit indices from uint8 bytes.
 ///

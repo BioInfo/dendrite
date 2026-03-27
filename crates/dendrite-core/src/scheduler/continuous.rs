@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 //! Continuous batching scheduler.
 //!
 //! True continuous batching: every step mixes ALL currently-decoding requests

@@ -131,15 +131,17 @@ impl PartialEq for BeamCandidate {
 
 impl Eq for BeamCandidate {}
 
-impl PartialOrd for BeamCandidate {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.score.partial_cmp(&other.score)
+impl Ord for BeamCandidate {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.score
+            .partial_cmp(&other.score)
+            .unwrap_or(Ordering::Equal)
     }
 }
 
-impl Ord for BeamCandidate {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+impl PartialOrd for BeamCandidate {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -487,8 +489,8 @@ mod tests {
         c2.tokens = vec![1, 2, 3, 4, 5]; // Length 5
 
         // With alpha > 0, longer sequence gets boost
-        let norm1 = c1.normalized_score(0.6);
-        let norm2 = c2.normalized_score(0.6);
+        let _norm1 = c1.normalized_score(0.6);
+        let _norm2 = c2.normalized_score(0.6);
 
         // Raw scores: -10 vs -12
         // With length penalty, -12/longer should be boosted

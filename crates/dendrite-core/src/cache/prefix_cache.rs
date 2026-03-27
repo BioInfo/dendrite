@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 //! Prefix cache for KV block reuse across sequences.
 //!
 //! [`PrefixCache`] bridges the [`RadixTree`] (token-sequence lookup) and
@@ -52,7 +53,7 @@
 //! ```
 
 use super::{BlockId, BlockPool, RadixTree};
-use crate::error::{DendriteError, Result};
+use crate::error::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -62,6 +63,7 @@ use std::time::{Duration, Instant};
 /// A single entry in the prefix cache: a contiguous run of full blocks that
 /// cover `tokens` starting at position 0 in that sequence.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct CacheEntry {
     /// Block IDs covering this prefix (in order).
     blocks: Vec<BlockId>,

@@ -33,7 +33,7 @@
 //! - NVIDIA Blackwell Architecture whitepaper
 
 use crate::error::Result;
-use candle_core::{Device, Tensor};
+use candle_core::Tensor;
 
 /// Default block size for MXFP8 scaling (OCP MX spec).
 pub const DEFAULT_BLOCK_SIZE: usize = 32;
@@ -230,7 +230,7 @@ impl MxFp8Tensor {
 
     /// Compute compression ratio vs FP16 (2 bytes/element).
     pub fn compression_ratio(&self) -> f32 {
-        let ndim = self.shape.len();
+        let _ndim = self.shape.len();
         let n_elements = self.shape.iter().product::<usize>();
         let fp16_bytes = n_elements * 2;
         fp16_bytes as f32 / self.size_bytes() as f32

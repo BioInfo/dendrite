@@ -175,8 +175,8 @@ mod tests {
         apply_llg_mask(&mut logits, &mask_bytes);
 
         assert!(logits[0].is_finite());
-        for i in 1..16 {
-            assert_eq!(logits[i], f32::NEG_INFINITY);
+        for logit in &logits[1..16] {
+            assert_eq!(*logit, f32::NEG_INFINITY);
         }
     }
 

@@ -232,8 +232,7 @@ impl TreeMcts {
 
     /// Get the best sequence of tokens (from root to best leaf).
     pub fn best_sequence(&self) -> Vec<u32> {
-        let pv = self.principal_variation();
-        pv
+        self.principal_variation()
     }
 
     /// Prune unselected branches to free KV cache blocks.
