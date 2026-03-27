@@ -38,7 +38,7 @@ impl BatchDecodeKernel {
             )));
         }
 
-        if config.num_qo_heads % config.num_kv_heads != 0 {
+        if !config.num_qo_heads.is_multiple_of(&config.num_kv_heads) {
             return Err(FfiError::InvalidArgument(
                 "num_qo_heads must be divisible by num_kv_heads".into(),
             ));
