@@ -79,10 +79,10 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
 
   msrv:
-    name: MSRV (1.80)
+    name: MSRV (1.87)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.80
+      - uses: dtolnay/rust-toolchain@1.87
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --all-targets
