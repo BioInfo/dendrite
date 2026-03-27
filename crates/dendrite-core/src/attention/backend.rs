@@ -453,8 +453,16 @@ mod tests {
         let config = create_test_config();
 
         // Store KV for 2 blocks
-        backend.store_kv(0, create_dummy_tensor(&[1, 4, 16, 64]), create_dummy_tensor(&[1, 4, 16, 64]));
-        backend.store_kv(1, create_dummy_tensor(&[1, 4, 16, 64]), create_dummy_tensor(&[1, 4, 16, 64]));
+        backend.store_kv(
+            0,
+            create_dummy_tensor(&[1, 4, 16, 64]),
+            create_dummy_tensor(&[1, 4, 16, 64]),
+        );
+        backend.store_kv(
+            1,
+            create_dummy_tensor(&[1, 4, 16, 64]),
+            create_dummy_tensor(&[1, 4, 16, 64]),
+        );
 
         let mut bt1 = BlockTable::new(16);
         bt1.push(BlockId(0));

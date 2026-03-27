@@ -129,10 +129,7 @@ fn main() {
             let norm_score = candidate.normalized_score(config.length_alpha);
             println!(
                 "  [{}] \"{}\" (score: {:.3}, norm: {:.3})",
-                candidate.id,
-                text,
-                candidate.score,
-                norm_score
+                candidate.id, text, candidate.score, norm_score
             );
         }
 

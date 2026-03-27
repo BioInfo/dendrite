@@ -25,15 +25,15 @@
 //! let constraint = LlgConstraint::new(parser);
 //! ```
 
+pub mod constrained_decoder;
 mod constraint;
 mod mask;
-pub mod constrained_decoder;
 pub mod tokenizer_bridge;
 
+pub use constrained_decoder::ConstrainedDecoder;
 pub use constraint::{
     to_llguidance, Grammar, GrammarConstraint, LlgConstraint, ParserFactory, ParserLimits,
     TokenParser, TopLevelGrammar,
 };
-pub use constrained_decoder::ConstrainedDecoder;
 pub use mask::TokenMask;
 pub use tokenizer_bridge::{apply_llg_mask, build_tok_env};

@@ -60,11 +60,7 @@ impl Fp8Linear {
     /// * `weight` - Dense weight tensor, shape [out_features, in_features]
     /// * `bias` - Optional bias tensor, shape [out_features]
     /// * `block_size` - MXFP8 block size (32 per OCP spec)
-    pub fn from_weight(
-        weight: &Tensor,
-        bias: Option<Tensor>,
-        block_size: usize,
-    ) -> Result<Self> {
+    pub fn from_weight(weight: &Tensor, bias: Option<Tensor>, block_size: usize) -> Result<Self> {
         let shape = weight.dims();
         assert_eq!(shape.len(), 2, "Weight must be 2D [out, in]");
         let out_features = shape[0];

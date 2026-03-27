@@ -84,14 +84,16 @@
 //! | `GreedyScorer` | `Q` | Pure exploitation |
 //! | `PuctScorer` | `Q + C * P * sqrt(N)/(1+n)` | AlphaZero-style with priors |
 
-mod scorer;
-mod expander;
-mod mcts;
 mod beam;
+mod expander;
 mod integrated;
+mod mcts;
+mod scorer;
 
-pub use scorer::{Scorer, UctScorer, GreedyScorer, PuctScorer, NodeStats, ScorerConfig};
-pub use expander::{Expander, TokenExpander, TokenExpanderConfig, UniformExpander, ExpansionResult};
-pub use mcts::{MctsSearch, MctsConfig, MctsNode, MctsStats};
-pub use beam::{BeamSearch, BeamConfig, BeamCandidate};
-pub use integrated::{TreeMcts, TreeBeam, TreeSearchContext};
+pub use beam::{BeamCandidate, BeamConfig, BeamSearch};
+pub use expander::{
+    Expander, ExpansionResult, TokenExpander, TokenExpanderConfig, UniformExpander,
+};
+pub use integrated::{TreeBeam, TreeMcts, TreeSearchContext};
+pub use mcts::{MctsConfig, MctsNode, MctsSearch, MctsStats};
+pub use scorer::{GreedyScorer, NodeStats, PuctScorer, Scorer, ScorerConfig, UctScorer};

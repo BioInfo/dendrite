@@ -229,9 +229,7 @@ impl Fp8SwiGluMlp {
 
     /// Total compressed weight size in bytes.
     pub fn weight_bytes(&self) -> usize {
-        self.gate_proj.weight_bytes()
-            + self.up_proj.weight_bytes()
-            + self.down_proj.weight_bytes()
+        self.gate_proj.weight_bytes() + self.up_proj.weight_bytes() + self.down_proj.weight_bytes()
     }
 
     /// Compression ratio vs FP16 (averaged across three projections).
@@ -327,7 +325,10 @@ mod tests {
 
         let out = attn.output(&context).unwrap();
         let vals: Vec<f32> = out.flatten_all().unwrap().to_vec1().unwrap();
-        assert!(vals.iter().all(|v| v.is_finite()), "Output has non-finite values");
+        assert!(
+            vals.iter().all(|v| v.is_finite()),
+            "Output has non-finite values"
+        );
     }
 
     // ── MLP tests ─────────────────────────────────────────

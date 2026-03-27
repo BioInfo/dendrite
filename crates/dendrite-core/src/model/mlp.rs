@@ -50,12 +50,9 @@ impl SwiGluMlp {
     /// Create a new SwiGLU MLP with random weights (for testing).
     pub fn random(hidden_size: usize, intermediate_size: usize, device: &Device) -> Result<Self> {
         // Weight shapes: [out_features, in_features] for matmul with x @ W^T
-        let gate_proj =
-            Tensor::randn(0.0f32, 0.02, &[intermediate_size, hidden_size], device)?;
-        let up_proj =
-            Tensor::randn(0.0f32, 0.02, &[intermediate_size, hidden_size], device)?;
-        let down_proj =
-            Tensor::randn(0.0f32, 0.02, &[hidden_size, intermediate_size], device)?;
+        let gate_proj = Tensor::randn(0.0f32, 0.02, &[intermediate_size, hidden_size], device)?;
+        let up_proj = Tensor::randn(0.0f32, 0.02, &[intermediate_size, hidden_size], device)?;
+        let down_proj = Tensor::randn(0.0f32, 0.02, &[hidden_size, intermediate_size], device)?;
 
         Ok(Self {
             gate_proj,
@@ -215,7 +212,13 @@ mod tests {
         let output = mlp.forward(&x).unwrap();
 
         // Zero weights should give zero output
-        let sum: f32 = output.abs().unwrap().sum_all().unwrap().to_scalar().unwrap();
+        let sum: f32 = output
+            .abs()
+            .unwrap()
+            .sum_all()
+            .unwrap()
+            .to_scalar()
+            .unwrap();
         assert!(sum < 1e-6, "Expected near-zero output, got sum={}", sum);
     }
 
@@ -252,7 +255,13 @@ mod tests {
         // After loading non-zero weights, output should be non-zero
         let x = Tensor::randn(0.0f32, 1.0, &[1, 64], &Device::Cpu).unwrap();
         let output = mlp.forward(&x).unwrap();
-        let sum: f32 = output.abs().unwrap().sum_all().unwrap().to_scalar().unwrap();
+        let sum: f32 = output
+            .abs()
+            .unwrap()
+            .sum_all()
+            .unwrap()
+            .to_scalar()
+            .unwrap();
         assert!(sum > 0.0);
     }
 

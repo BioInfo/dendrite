@@ -203,11 +203,15 @@ impl BeamSearch {
 
         // Early stopping: done if we have enough finished and they're better
         if self.config.early_stopping && self.finished.len() >= self.config.num_return {
-            let best_finished = self.finished.iter()
+            let best_finished = self
+                .finished
+                .iter()
                 .map(|c| c.normalized_score(self.config.length_alpha))
                 .fold(f64::NEG_INFINITY, f64::max);
 
-            let best_active = self.candidates.iter()
+            let best_active = self
+                .candidates
+                .iter()
                 .map(|c| c.normalized_score(self.config.length_alpha))
                 .fold(f64::NEG_INFINITY, f64::max);
 
@@ -258,22 +262,19 @@ impl BeamSearch {
     }
 
     /// Simpler expansion with just logits.
-    pub fn expand_with_logits(
-        &mut self,
-        candidate_id: usize,
-        logits: &[f32],
-        top_k: usize,
-    ) {
+    pub fn expand_with_logits(&mut self, candidate_id: usize, logits: &[f32], top_k: usize) {
         // Compute log probs and get top-k
         let max_logit = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
         let exp_logits: Vec<f32> = logits.iter().map(|&l| (l - max_logit).exp()).collect();
         let sum_exp: f32 = exp_logits.iter().sum();
-        let log_probs: Vec<f64> = exp_logits.iter()
+        let log_probs: Vec<f64> = exp_logits
+            .iter()
             .map(|&e| (e / sum_exp).ln() as f64)
             .collect();
 
         // Get top-k tokens
-        let mut indexed: Vec<(u32, f64)> = log_probs.iter()
+        let mut indexed: Vec<(u32, f64)> = log_probs
+            .iter()
             .enumerate()
             .map(|(i, &lp)| (i as u32, lp))
             .collect();
@@ -301,31 +302,35 @@ impl BeamSearch {
         });
 
         // Keep top beam_width
-        self.candidates = self.pending.drain(..).take(self.config.beam_width).collect();
+        self.candidates = self
+            .pending
+            .drain(..)
+            .take(self.config.beam_width)
+            .collect();
         self.step += 1;
     }
 
     /// Get the best sequence found.
     pub fn best_sequence(&self) -> Option<&BeamCandidate> {
         // Check finished first
-        let best_finished = self.finished.iter()
-            .max_by(|a, b| {
-                let score_a = a.normalized_score(self.config.length_alpha);
-                let score_b = b.normalized_score(self.config.length_alpha);
-                score_a.partial_cmp(&score_b).unwrap_or(Ordering::Equal)
-            });
+        let best_finished = self.finished.iter().max_by(|a, b| {
+            let score_a = a.normalized_score(self.config.length_alpha);
+            let score_b = b.normalized_score(self.config.length_alpha);
+            score_a.partial_cmp(&score_b).unwrap_or(Ordering::Equal)
+        });
 
         // Then check active candidates
-        let best_active = self.candidates.iter()
-            .max_by(|a, b| {
-                let score_a = a.normalized_score(self.config.length_alpha);
-                let score_b = b.normalized_score(self.config.length_alpha);
-                score_a.partial_cmp(&score_b).unwrap_or(Ordering::Equal)
-            });
+        let best_active = self.candidates.iter().max_by(|a, b| {
+            let score_a = a.normalized_score(self.config.length_alpha);
+            let score_b = b.normalized_score(self.config.length_alpha);
+            score_a.partial_cmp(&score_b).unwrap_or(Ordering::Equal)
+        });
 
         match (best_finished, best_active) {
             (Some(f), Some(a)) => {
-                if f.normalized_score(self.config.length_alpha) >= a.normalized_score(self.config.length_alpha) {
+                if f.normalized_score(self.config.length_alpha)
+                    >= a.normalized_score(self.config.length_alpha)
+                {
                     Some(f)
                 } else {
                     Some(a)
@@ -339,9 +344,8 @@ impl BeamSearch {
 
     /// Get top-n sequences.
     pub fn best_sequences(&self, n: usize) -> Vec<&BeamCandidate> {
-        let mut all: Vec<&BeamCandidate> = self.finished.iter()
-            .chain(self.candidates.iter())
-            .collect();
+        let mut all: Vec<&BeamCandidate> =
+            self.finished.iter().chain(self.candidates.iter()).collect();
 
         all.sort_by(|a, b| {
             let score_a = a.normalized_score(self.config.length_alpha);
@@ -401,9 +405,7 @@ mod tests {
 
         assert_eq!(beam.candidates().len(), 2);
         // Best candidates should be token 1 and 2
-        let tokens: Vec<u32> = beam.candidates().iter()
-            .map(|c| c.tokens[0])
-            .collect();
+        let tokens: Vec<u32> = beam.candidates().iter().map(|c| c.tokens[0]).collect();
         assert!(tokens.contains(&1));
         assert!(tokens.contains(&2));
     }
@@ -417,7 +419,9 @@ mod tests {
         beam.expand_candidate(0, &log_probs, &node_ids);
         beam.step();
 
-        let best = beam.candidates().iter()
+        let best = beam
+            .candidates()
+            .iter()
             .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
             .unwrap();
 
@@ -427,13 +431,16 @@ mod tests {
 
     #[test]
     fn beam_search_handles_eos() {
-        let mut beam = BeamSearch::new(NodeId::ROOT, BeamConfig {
-            beam_width: 2,
-            max_length: 10,
-            eos_token_id: Some(99),
-            min_length: 0,
-            ..Default::default()
-        });
+        let mut beam = BeamSearch::new(
+            NodeId::ROOT,
+            BeamConfig {
+                beam_width: 2,
+                max_length: 10,
+                eos_token_id: Some(99),
+                min_length: 0,
+                ..Default::default()
+            },
+        );
 
         // Include EOS token
         let log_probs = vec![(99u32, -0.5), (2, -1.0)];
@@ -448,13 +455,16 @@ mod tests {
 
     #[test]
     fn beam_search_respects_min_length() {
-        let mut beam = BeamSearch::new(NodeId::ROOT, BeamConfig {
-            beam_width: 2,
-            max_length: 10,
-            eos_token_id: Some(99),
-            min_length: 3, // Require at least 3 tokens
-            ..Default::default()
-        });
+        let mut beam = BeamSearch::new(
+            NodeId::ROOT,
+            BeamConfig {
+                beam_width: 2,
+                max_length: 10,
+                eos_token_id: Some(99),
+                min_length: 3, // Require at least 3 tokens
+                ..Default::default()
+            },
+        );
 
         // EOS at first step should be ignored due to min_length
         let log_probs = vec![(99u32, -0.5), (2, -1.0)];
@@ -483,7 +493,7 @@ mod tests {
         // Raw scores: -10 vs -12
         // With length penalty, -12/longer should be boosted
         assert!(c1.score > c2.score); // Raw: c1 better
-        // Normalized might change order depending on alpha
+                                      // Normalized might change order depending on alpha
     }
 
     #[test]
@@ -501,11 +511,14 @@ mod tests {
 
     #[test]
     fn beam_search_is_done_at_max_length() {
-        let mut beam = BeamSearch::new(NodeId::ROOT, BeamConfig {
-            beam_width: 1,
-            max_length: 2,
-            ..Default::default()
-        });
+        let mut beam = BeamSearch::new(
+            NodeId::ROOT,
+            BeamConfig {
+                beam_width: 1,
+                max_length: 2,
+                ..Default::default()
+            },
+        );
 
         assert!(!beam.is_done());
 
@@ -555,9 +568,7 @@ mod tests {
 
         // Should have top 2 (beam_width)
         assert_eq!(beam.candidates().len(), 2);
-        let tokens: Vec<u32> = beam.candidates().iter()
-            .map(|c| c.tokens[0])
-            .collect();
+        let tokens: Vec<u32> = beam.candidates().iter().map(|c| c.tokens[0]).collect();
         assert!(tokens.contains(&5));
         assert!(tokens.contains(&3));
     }

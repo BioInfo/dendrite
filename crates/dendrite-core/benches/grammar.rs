@@ -156,17 +156,13 @@ fn bench_constraint_init(c: &mut Criterion) {
         ("uuid", patterns::UUID),
         ("date", patterns::ISO_DATE),
     ] {
-        group.bench_with_input(
-            BenchmarkId::new("regex", name),
-            &pattern,
-            |b, pattern| {
-                let grammar = Grammar::regex(*pattern);
-                b.iter(|| {
-                    let constraint = GrammarConstraint::new(grammar.clone(), 50000).unwrap();
-                    black_box(constraint)
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("regex", name), &pattern, |b, pattern| {
+            let grammar = Grammar::regex(*pattern);
+            b.iter(|| {
+                let constraint = GrammarConstraint::new(grammar.clone(), 50000).unwrap();
+                black_box(constraint)
+            })
+        });
     }
 
     group.finish();
@@ -205,16 +201,12 @@ fn bench_mask_computation(c: &mut Criterion) {
         let grammar = Grammar::json_schema(schema);
         let constraint = GrammarConstraint::new(grammar, 50000).unwrap();
 
-        group.bench_with_input(
-            BenchmarkId::new("schema", name),
-            &name,
-            |b, _| {
-                b.iter(|| {
-                    let mask = constraint.compute_mask().unwrap();
-                    black_box(mask)
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("schema", name), &name, |b, _| {
+            b.iter(|| {
+                let mask = constraint.compute_mask().unwrap();
+                black_box(mask)
+            })
+        });
     }
 
     group.finish();
@@ -299,12 +291,16 @@ fn bench_llguidance_conversion(c: &mut Criterion) {
     for (name, pattern) in [("word", patterns::SIMPLE_WORD), ("email", patterns::EMAIL)] {
         let grammar = Grammar::regex(pattern);
 
-        group.bench_with_input(BenchmarkId::new("regex_to_llg", name), &grammar, |b, grammar| {
-            b.iter(|| {
-                let llg = to_llguidance(black_box(grammar));
-                black_box(llg)
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("regex_to_llg", name),
+            &grammar,
+            |b, grammar| {
+                b.iter(|| {
+                    let llg = to_llguidance(black_box(grammar));
+                    black_box(llg)
+                })
+            },
+        );
     }
 
     group.finish();
@@ -329,9 +325,8 @@ fn bench_mcts_constraint_tracking(c: &mut Criterion) {
                     }
 
                     // Fork for MCTS branches
-                    let mut branches: Vec<GrammarConstraint> = (0..bf)
-                        .map(|_| root.fork())
-                        .collect();
+                    let mut branches: Vec<GrammarConstraint> =
+                        (0..bf).map(|_| root.fork()).collect();
 
                     // Each branch continues independently
                     for (i, branch) in branches.iter_mut().enumerate() {
@@ -363,9 +358,7 @@ fn bench_beam_constraint_tracking(c: &mut Criterion) {
                     let root = GrammarConstraint::new(grammar, 50000).unwrap();
 
                     // Simulate beam search steps
-                    let mut beam: Vec<GrammarConstraint> = (0..bw)
-                        .map(|_| root.fork())
-                        .collect();
+                    let mut beam: Vec<GrammarConstraint> = (0..bw).map(|_| root.fork()).collect();
 
                     // 3 beam search steps
                     for step in 0..3 {

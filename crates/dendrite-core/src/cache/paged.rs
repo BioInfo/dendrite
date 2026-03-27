@@ -70,8 +70,8 @@ impl PageFormat {
     /// Bytes per element for quantized indices.
     pub fn bytes_per_element(&self) -> f64 {
         match self {
-            PageFormat::Full => 2.0,           // fp16
-            PageFormat::TurboQuant4Bit => 0.5, // 4 bits packed
+            PageFormat::Full => 2.0,            // fp16
+            PageFormat::TurboQuant4Bit => 0.5,  // 4 bits packed
             PageFormat::TurboQuant2Bit => 0.25, // 2 bits packed
         }
     }
@@ -144,11 +144,7 @@ impl Page {
         dtype: DType,
         device: &Device,
     ) -> Result<Self> {
-        let data = Tensor::zeros(
-            (2, num_kv_heads, page_size, head_dim),
-            dtype,
-            device,
-        )?;
+        let data = Tensor::zeros((2, num_kv_heads, page_size, head_dim), dtype, device)?;
 
         Ok(Self {
             id,
@@ -173,16 +169,8 @@ impl Page {
     ) -> Result<Self> {
         // Packed 4-bit: head_dim/2 bytes per element
         let packed_dim = head_dim / 2;
-        let data = Tensor::zeros(
-            (2, num_kv_heads, page_size, packed_dim),
-            DType::U8,
-            device,
-        )?;
-        let norms = Tensor::zeros(
-            (2, num_kv_heads, page_size, 1),
-            DType::F16,
-            device,
-        )?;
+        let data = Tensor::zeros((2, num_kv_heads, page_size, packed_dim), DType::U8, device)?;
+        let norms = Tensor::zeros((2, num_kv_heads, page_size, 1), DType::F16, device)?;
 
         Ok(Self {
             id,
@@ -269,7 +257,7 @@ impl Page {
             // key shape: [num_kv_heads, 1, head_dim]
 
             // Squeeze the seq dimension
-            let key = key.squeeze(1)?;  // [num_kv_heads, head_dim]
+            let key = key.squeeze(1)?; // [num_kv_heads, head_dim]
             let value = value.squeeze(1)?;
 
             // Get slices for K and V
@@ -477,10 +465,7 @@ impl PageTable {
 
     /// Get page indices for FlashInfer.
     pub fn page_indices(&self) -> Vec<i32> {
-        self.pages
-            .iter()
-            .map(|p| p.read().id().0 as i32)
-            .collect()
+        self.pages.iter().map(|p| p.read().id().0 as i32).collect()
     }
 
     /// Get last page length for FlashInfer.
@@ -571,9 +556,9 @@ impl PagedKvCache {
 
         for layer in &self.layer_tables {
             let mut tables = layer.write();
-            let parent_table = tables
-                .get(&parent_id)
-                .ok_or_else(|| DendriteError::CacheError(format!("Unknown sequence: {}", parent_id)))?;
+            let parent_table = tables.get(&parent_id).ok_or_else(|| {
+                DendriteError::CacheError(format!("Unknown sequence: {}", parent_id))
+            })?;
 
             let child_table = parent_table.fork();
             tables.insert(child_id, child_table);
@@ -651,14 +636,7 @@ mod tests {
 
     #[test]
     fn page_pool_creation() {
-        let pool = PagePool::new(
-            4,
-            DEFAULT_PAGE_SIZE,
-            4,
-            64,
-            DType::F32,
-            Device::Cpu,
-        ).unwrap();
+        let pool = PagePool::new(4, DEFAULT_PAGE_SIZE, 4, 64, DType::F32, Device::Cpu).unwrap();
 
         assert_eq!(pool.num_pages(), 4);
         assert_eq!(pool.num_free(), 4);
@@ -666,14 +644,7 @@ mod tests {
 
     #[test]
     fn page_pool_allocation() {
-        let pool = PagePool::new(
-            2,
-            DEFAULT_PAGE_SIZE,
-            4,
-            64,
-            DType::F32,
-            Device::Cpu,
-        ).unwrap();
+        let pool = PagePool::new(2, DEFAULT_PAGE_SIZE, 4, 64, DType::F32, Device::Cpu).unwrap();
 
         let p1 = pool.allocate().unwrap();
         assert_eq!(pool.num_free(), 1);
@@ -692,14 +663,7 @@ mod tests {
 
     #[test]
     fn page_table_fork() {
-        let pool = PagePool::new(
-            4,
-            DEFAULT_PAGE_SIZE,
-            4,
-            64,
-            DType::F32,
-            Device::Cpu,
-        ).unwrap();
+        let pool = PagePool::new(4, DEFAULT_PAGE_SIZE, 4, 64, DType::F32, Device::Cpu).unwrap();
 
         let mut table1 = PageTable::new(DEFAULT_PAGE_SIZE);
         table1.push_page(pool.allocate().unwrap());
@@ -719,14 +683,15 @@ mod tests {
     #[test]
     fn paged_cache_sequence_lifecycle() {
         let cache = PagedKvCache::new(
-            2,  // layers
-            4,  // initial pages
+            2, // layers
+            4, // initial pages
             DEFAULT_PAGE_SIZE,
             4,  // kv heads
             64, // head dim
             DType::F32,
             Device::Cpu,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Allocate sequence
         let seq1 = cache.allocate_sequence();
@@ -761,16 +726,22 @@ mod tests {
         let ratio_2bit = PageFormat::TurboQuant2Bit.compression_ratio(head_dim);
 
         // 4-bit: ~3.88x compression
-        assert!(ratio_4bit > 3.5 && ratio_4bit < 4.5, "4-bit ratio: {ratio_4bit}");
+        assert!(
+            ratio_4bit > 3.5 && ratio_4bit < 4.5,
+            "4-bit ratio: {ratio_4bit}"
+        );
         // 2-bit: ~7.53x compression
-        assert!(ratio_2bit > 7.0 && ratio_2bit < 8.0, "2-bit ratio: {ratio_2bit}");
+        assert!(
+            ratio_2bit > 7.0 && ratio_2bit < 8.0,
+            "2-bit ratio: {ratio_2bit}"
+        );
     }
 
     #[test]
     fn turboquant_page_creation() {
-        let page = Page::with_turboquant_4bit(
-            PageId::new(0), 8, DEFAULT_PAGE_SIZE, 128, &Device::Cpu,
-        ).unwrap();
+        let page =
+            Page::with_turboquant_4bit(PageId::new(0), 8, DEFAULT_PAGE_SIZE, 128, &Device::Cpu)
+                .unwrap();
 
         assert_eq!(page.format(), PageFormat::TurboQuant4Bit);
         assert!(page.norms().is_some());
@@ -790,8 +761,12 @@ mod tests {
         let page_size = DEFAULT_PAGE_SIZE;
         let num_heads = 8;
 
-        let full_mem = num_pages * page_size * num_heads * PageFormat::Full.bytes_per_token_per_head(head_dim);
-        let tq4_mem = num_pages * page_size * num_heads * PageFormat::TurboQuant4Bit.bytes_per_token_per_head(head_dim);
+        let full_mem =
+            num_pages * page_size * num_heads * PageFormat::Full.bytes_per_token_per_head(head_dim);
+        let tq4_mem = num_pages
+            * page_size
+            * num_heads
+            * PageFormat::TurboQuant4Bit.bytes_per_token_per_head(head_dim);
 
         let savings_gb = (full_mem - tq4_mem) as f64 / 1e9;
         let ratio = full_mem as f64 / tq4_mem as f64;

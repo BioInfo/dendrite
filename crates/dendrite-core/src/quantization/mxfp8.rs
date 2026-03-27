@@ -115,7 +115,8 @@ impl MxFp8Tensor {
 
                 // Clamp exponent to E8M0 range
                 let log2_scale = scale.log2().floor();
-                let clamped_scale = 2.0f32.powf(log2_scale.clamp(-(E8M0_MAX as f32), E8M0_MAX as f32));
+                let clamped_scale =
+                    2.0f32.powf(log2_scale.clamp(-(E8M0_MAX as f32), E8M0_MAX as f32));
 
                 scales_vec[row * n_blocks + block_idx] = clamped_scale;
 
@@ -170,9 +171,13 @@ impl MxFp8Tensor {
         let cols = *shape.last().unwrap_or(&1);
         let n_blocks = cols.div_ceil(self.block_size);
 
-        let data_f32 = self.data.reshape((rows, cols))?
+        let data_f32 = self
+            .data
+            .reshape((rows, cols))?
             .to_dtype(candle_core::DType::F32)?;
-        let scales_f32 = self.scales.reshape((rows, n_blocks))?
+        let scales_f32 = self
+            .scales
+            .reshape((rows, n_blocks))?
             .to_dtype(candle_core::DType::F32)?;
 
         let data_vec: Vec<f32> = data_f32.flatten_all()?.to_vec1()?;
@@ -240,10 +245,7 @@ impl MxFp8Tensor {
 ///
 /// # Returns
 /// Vector of `MxFp8Tensor` in the same order as input weights.
-pub fn quantize_weights_mxfp8(
-    weights: &[Tensor],
-    block_size: usize,
-) -> Result<Vec<MxFp8Tensor>> {
+pub fn quantize_weights_mxfp8(weights: &[Tensor], block_size: usize) -> Result<Vec<MxFp8Tensor>> {
     weights
         .iter()
         .map(|w| MxFp8Tensor::quantize(w, block_size))
@@ -275,7 +277,13 @@ mod tests {
         let deq_vec: Vec<f32> = dequantized.flatten_all().unwrap().to_vec1().unwrap();
         for (orig, deq) in data.iter().zip(deq_vec.iter()) {
             let err = (orig - deq).abs();
-            assert!(err < 0.05, "Dequant error too large: {} vs {} (err {})", orig, deq, err);
+            assert!(
+                err < 0.05,
+                "Dequant error too large: {} vs {} (err {})",
+                orig,
+                deq,
+                err
+            );
         }
     }
 
@@ -343,7 +351,11 @@ mod tests {
 
         let deq_vec: Vec<f32> = dequantized.flatten_all().unwrap().to_vec1().unwrap();
         for v in &deq_vec {
-            assert!(v.abs() < 1e-6, "Zero tensor should dequantize to zeros, got {}", v);
+            assert!(
+                v.abs() < 1e-6,
+                "Zero tensor should dequantize to zeros, got {}",
+                v
+            );
         }
     }
 }

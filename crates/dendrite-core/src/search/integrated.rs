@@ -337,8 +337,7 @@ impl TreeBeam {
             .unwrap_or(NodeId::ROOT);
 
         // Get top-k tokens
-        let mut indexed_logits: Vec<(usize, f32)> =
-            logits.iter().copied().enumerate().collect();
+        let mut indexed_logits: Vec<(usize, f32)> = logits.iter().copied().enumerate().collect();
         indexed_logits.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         let top_tokens: Vec<u32> = indexed_logits
             .iter()
@@ -659,8 +658,8 @@ mod tests {
     fn tree_mcts_with_prefix_cache() {
         let ctx = create_test_context();
         let config = MctsConfig::default();
-        let mut mcts = TreeMcts::new(ctx.tree_state().clone(), NodeId::ROOT, config)
-            .with_prefix_cache();
+        let mut mcts =
+            TreeMcts::new(ctx.tree_state().clone(), NodeId::ROOT, config).with_prefix_cache();
 
         let expansion = ExpansionResult {
             children: Vec::new(),
@@ -727,7 +726,9 @@ mod tests {
             priors: None,
         };
 
-        let grandchildren = mcts.expand_with_tree(root_children[0], &expansion2).unwrap();
+        let grandchildren = mcts
+            .expand_with_tree(root_children[0], &expansion2)
+            .unwrap();
         assert_eq!(grandchildren.len(), 2);
 
         // Verify tree structure

@@ -103,7 +103,10 @@ pub struct PolarQuantCompressor {
 
 impl PolarQuantCompressor {
     pub fn new(bits: u8) -> Self {
-        assert!(bits == 2 || bits == 4 || bits == 8, "bits must be 2, 4, or 8");
+        assert!(
+            bits == 2 || bits == 4 || bits == 8,
+            "bits must be 2, 4, or 8"
+        );
         Self { bits }
     }
 
@@ -153,7 +156,11 @@ impl PolarQuantCompressor {
             let byte_pos = bit_pos / 8;
             let bit_off = bit_pos % 8;
             let b0 = data[byte_pos] as u32;
-            let b1 = if byte_pos + 1 < data.len() { data[byte_pos + 1] as u32 } else { 0 };
+            let b1 = if byte_pos + 1 < data.len() {
+                data[byte_pos + 1] as u32
+            } else {
+                0
+            };
             let wide = b0 | (b1 << 8);
             out.push((wide >> bit_off) & mask);
         }
@@ -216,7 +223,10 @@ pub struct QjlCompressor {
 
 impl QjlCompressor {
     pub fn new(proj_dim: usize) -> Self {
-        Self { proj_dim, seed: 0xDEAD_BEEF_CAFE_1234 }
+        Self {
+            proj_dim,
+            seed: 0xDEAD_BEEF_CAFE_1234,
+        }
     }
 
     /// Deterministic Rademacher projection matrix row.
@@ -225,14 +235,21 @@ impl QjlCompressor {
     /// generator seeded from `(row, seed)`.  This avoids storing the matrix.
     fn proj_row(&self, row: usize, input_dim: usize) -> Vec<f32> {
         let scale = 1.0 / (self.proj_dim as f32).sqrt();
-        let mut state = self.seed.wrapping_add(row as u64).wrapping_mul(0x9e3779b97f4a7c15);
+        let mut state = self
+            .seed
+            .wrapping_add(row as u64)
+            .wrapping_mul(0x9e3779b97f4a7c15);
         (0..input_dim)
             .map(|_| {
                 // xorshift64
                 state ^= state << 13;
                 state ^= state >> 7;
                 state ^= state << 17;
-                if state & 1 == 0 { scale } else { -scale }
+                if state & 1 == 0 {
+                    scale
+                } else {
+                    -scale
+                }
             })
             .collect()
     }
@@ -286,7 +303,10 @@ impl KvCompressor for QjlCompressor {
         let packed = Self::pack_signs(&signs);
         CompressedVec {
             data: packed,
-            scheme: CompressionScheme::TurboQuant { polar_bits: 0, qjl_bits: 1 },
+            scheme: CompressionScheme::TurboQuant {
+                polar_bits: 0,
+                qjl_bits: 1,
+            },
             norm,
         }
     }
@@ -385,19 +405,28 @@ impl KvCompressor for TurboQuantCompressor {
 
         let c_polar = CompressedVec {
             data: polar_data,
-            scheme: CompressionScheme::PolarQuant { bits: self.polar.bits },
+            scheme: CompressionScheme::PolarQuant {
+                bits: self.polar.bits,
+            },
             norm: c.norm,
         };
         let approx = self.polar.decompress(&c_polar, head_dim);
 
         let c_qjl = CompressedVec {
             data: qjl_data,
-            scheme: CompressionScheme::TurboQuant { polar_bits: 0, qjl_bits: 1 },
+            scheme: CompressionScheme::TurboQuant {
+                polar_bits: 0,
+                qjl_bits: 1,
+            },
             norm: c.norm,
         };
         let residual = self.qjl.decompress(&c_qjl, head_dim);
 
-        approx.iter().zip(residual.iter()).map(|(a, r)| a + r).collect()
+        approx
+            .iter()
+            .zip(residual.iter())
+            .map(|(a, r)| a + r)
+            .collect()
     }
 
     fn name(&self) -> &'static str {
@@ -456,7 +485,11 @@ pub fn relative_l2_error(original: &[f32], reconstructed: &[f32]) -> f32 {
         .sum::<f32>()
         .sqrt();
     let norm: f32 = original.iter().map(|x| x.powi(2)).sum::<f32>().sqrt();
-    if norm > 1e-9 { err / norm } else { err }
+    if norm > 1e-9 {
+        err / norm
+    } else {
+        err
+    }
 }
 
 /// Compression ratio vs raw FP16 (2 bytes per element).
@@ -552,7 +585,10 @@ mod tests {
         let turbo_err = relative_l2_error(&v, &v2);
         println!("TurboQuant error: {turbo_err:.4}");
         // Combined scheme: bounded error, smaller than raw QJL alone
-        assert!(turbo_err < 1.5, "TurboQuant error unexpectedly high: {turbo_err}");
+        assert!(
+            turbo_err < 1.5,
+            "TurboQuant error unexpectedly high: {turbo_err}"
+        );
     }
 
     #[test]
@@ -583,7 +619,13 @@ mod tests {
         let tq = TurboQuantCompressor::new(4, 32);
         let cv = tq.compress(&v);
         assert!(
-            matches!(cv.scheme, CompressionScheme::TurboQuant { polar_bits: 4, qjl_bits: 1 }),
+            matches!(
+                cv.scheme,
+                CompressionScheme::TurboQuant {
+                    polar_bits: 4,
+                    qjl_bits: 1
+                }
+            ),
             "Expected TurboQuant scheme tag"
         );
     }

@@ -56,11 +56,10 @@ mod radix;
 pub use block::{Block, BlockId};
 pub use block_table::BlockTable;
 pub use compress::{
-    CompressionScheme, CompressedVec, IdentityCompressor, KvCompressor,
-    PolarQuantCompressor, QjlCompressor, TurboQuantCompressor,
-    compression_ratio_vs_fp16, relative_l2_error,
+    compression_ratio_vs_fp16, relative_l2_error, CompressedVec, CompressionScheme,
+    IdentityCompressor, KvCompressor, PolarQuantCompressor, QjlCompressor, TurboQuantCompressor,
 };
-pub use paged::{Page, PageId, PagePool, PageTable, PagedKvCache, PageFormat, DEFAULT_PAGE_SIZE};
+pub use paged::{Page, PageFormat, PageId, PagePool, PageTable, PagedKvCache, DEFAULT_PAGE_SIZE};
 pub use pool::{BlockPool, PoolStats};
 pub use prefix_cache::{PrefixCache, PrefixCacheStats, PrefixHit};
 pub use radix::{RadixTree, RadixTreeStats};

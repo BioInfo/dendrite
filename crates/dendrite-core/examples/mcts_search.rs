@@ -27,7 +27,11 @@ impl SimpleEnvironment {
 
     /// Simulate taking an action and get a noisy reward.
     fn step(&self, action: u32, rng: &mut impl Rng) -> f64 {
-        let mean = self.action_means.get(action as usize).copied().unwrap_or(0.0);
+        let mean = self
+            .action_means
+            .get(action as usize)
+            .copied()
+            .unwrap_or(0.0);
         let noise = (rng.gen::<f64>() - 0.5) * 2.0 * self.noise;
         (mean + noise).clamp(0.0, 1.0)
     }

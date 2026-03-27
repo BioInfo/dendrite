@@ -44,17 +44,16 @@ impl LayerCache {
     ///
     /// Returns (key, value) tensors that include all cached + new tokens.
     pub fn append(&mut self, key: &Tensor, value: &Tensor) -> Result<(Tensor, Tensor)> {
-        let (new_key, new_value) = if let (Some(cached_k), Some(cached_v)) =
-            (&self.key, &self.value)
-        {
-            // Concatenate along sequence dimension (dim 2)
-            let k = Tensor::cat(&[cached_k, key], 2)?;
-            let v = Tensor::cat(&[cached_v, value], 2)?;
-            (k, v)
-        } else {
-            // First tokens - just clone
-            (key.clone(), value.clone())
-        };
+        let (new_key, new_value) =
+            if let (Some(cached_k), Some(cached_v)) = (&self.key, &self.value) {
+                // Concatenate along sequence dimension (dim 2)
+                let k = Tensor::cat(&[cached_k, key], 2)?;
+                let v = Tensor::cat(&[cached_v, value], 2)?;
+                (k, v)
+            } else {
+                // First tokens - just clone
+                (key.clone(), value.clone())
+            };
 
         // Update cache
         self.key = Some(new_key.clone());
@@ -209,7 +208,7 @@ impl CompressedLayerCache {
                     let vec_t = tensor
                         .narrow(0, b, 1)?.squeeze(0)?   // [heads, seq, head_dim]
                         .narrow(0, h, 1)?.squeeze(0)?   // [seq, head_dim]
-                        .narrow(0, s, 1)?.squeeze(0)?;  // [head_dim]
+                        .narrow(0, s, 1)?.squeeze(0)?; // [head_dim]
                     let vec_f: Vec<f32> = vec_t.to_vec1()?;
                     let cv = compressor.compress(&vec_f);
                     store[b][h].push(cv);
@@ -220,10 +219,7 @@ impl CompressedLayerCache {
     }
 
     /// Reconstruct a full `[batch, heads, seq_len, head_dim]` tensor from compressed store.
-    fn decompress_all(
-        &self,
-        store: &Vec<Vec<Vec<CompressedVec>>>,
-    ) -> crate::error::Result<Tensor> {
+    fn decompress_all(&self, store: &Vec<Vec<Vec<CompressedVec>>>) -> crate::error::Result<Tensor> {
         let head_dim = self.head_dim.unwrap_or(64);
         let batch = store.len();
         let heads = store[0].len();
@@ -280,11 +276,7 @@ pub struct CompressedKvCache {
 }
 
 impl CompressedKvCache {
-    pub fn new(
-        num_layers: usize,
-        compressor: Arc<dyn KvCompressor>,
-        device: Device,
-    ) -> Self {
+    pub fn new(num_layers: usize, compressor: Arc<dyn KvCompressor>, device: Device) -> Self {
         let layers = (0..num_layers)
             .map(|_| CompressedLayerCache::new(Arc::clone(&compressor), device.clone()))
             .collect();

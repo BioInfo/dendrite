@@ -251,7 +251,9 @@ impl BlockPool {
     /// Return a snapshot of pool statistics.
     pub fn stats(&self) -> PoolStats {
         let free_blocks = self.free_list.lock().len();
-        let used_blocks = self.total_blocks.saturating_sub(free_blocks + self.reserved_count);
+        let used_blocks = self
+            .total_blocks
+            .saturating_sub(free_blocks + self.reserved_count);
         PoolStats {
             total_blocks: self.total_blocks,
             free_blocks,
@@ -496,7 +498,7 @@ mod tests {
         let ids = p.allocate_batch(4).unwrap();
         // Share the first block
         p.share(ids[0]).unwrap(); // refcount = 2
-        // free_batch should only return blocks with refcount → 0
+                                  // free_batch should only return blocks with refcount → 0
         p.free_batch(&ids).unwrap();
         // ids[0] still has refcount 1, so only 3 blocks returned
         assert_eq!(p.free_count(), 4 + 3); // original 4 free + 3 returned
@@ -537,7 +539,11 @@ mod tests {
         p.free_batch(&ids2).unwrap(); // drops to 60 used
 
         let s = p.stats();
-        assert!(s.peak_used >= 80, "peak should be ≥ 80, got {}", s.peak_used);
+        assert!(
+            s.peak_used >= 80,
+            "peak should be ≥ 80, got {}",
+            s.peak_used
+        );
         drop(ids1);
     }
 

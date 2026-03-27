@@ -127,7 +127,10 @@ fn demo_fork_for_tree_search() {
     base_constraint.accept_token(100).unwrap();
     base_constraint.accept_token(200).unwrap();
 
-    println!("Base constraint after 2 tokens: valid={}", base_constraint.is_valid());
+    println!(
+        "Base constraint after 2 tokens: valid={}",
+        base_constraint.is_valid()
+    );
 
     // Fork for tree search branches
     let branch1 = base_constraint.fork();
@@ -161,7 +164,10 @@ fn demo_token_mask() {
     println!("Computed token mask:");
     println!("  Total vocabulary: {}", constraint.vocab_size());
     println!("  Allowed tokens: {}", mask.num_allowed());
-    println!("  Blocked tokens: {}", mask.vocab_size() - mask.num_allowed());
+    println!(
+        "  Blocked tokens: {}",
+        mask.vocab_size() - mask.num_allowed()
+    );
 
     // Note: Without full llguidance integration, the mask allows all tokens
     // In production, LlgConstraint provides actual grammar-based masking
@@ -183,14 +189,16 @@ fn demo_grammar_types() {
     println!("2. Regex (phone format): {:?}", regex_grammar);
 
     // Lark CFG
-    let lark_grammar = Grammar::lark(r#"
+    let lark_grammar = Grammar::lark(
+        r#"
         start: sentence
         sentence: subject verb object
         subject: "The" NOUN
         verb: "ate" | "saw" | "liked"
         object: "the" NOUN
         NOUN: "cat" | "dog" | "mouse"
-    "#);
+    "#,
+    );
     println!("3. Lark CFG (simple sentences): Lark(...)");
 
     // None (no constraint)
@@ -254,7 +262,9 @@ fn main() {
     println!("═══════════════════════════════════════════════");
     println!("Key Concepts:");
     println!("  • Grammar: Defines valid output structure (JSON schema, regex, CFG)");
-    println!("  • GrammarConstraint: Lightweight constraint without tokenizer (for testing/search)");
+    println!(
+        "  • GrammarConstraint: Lightweight constraint without tokenizer (for testing/search)"
+    );
     println!("  • ConstrainedDecoder: Production API — full llguidance integration");
     println!("  • TokenMask: Bit-vector of allowed tokens, applied to logits");
     println!("  • Fork: Creates independent copies for tree search (beam/MCTS)");

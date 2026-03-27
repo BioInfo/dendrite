@@ -61,22 +61,34 @@ fn demo_watermarks() {
 
     // Initial state
     let s0 = pool.stats();
-    println!("  Initial: free={}, used={}, peak={}", s0.free_blocks, s0.used_blocks, s0.peak_used);
+    println!(
+        "  Initial: free={}, used={}, peak={}",
+        s0.free_blocks, s0.used_blocks, s0.peak_used
+    );
 
     // First wave: allocate 600 blocks
     let wave1 = pool.allocate_batch(600).unwrap();
     let s1 = pool.stats();
-    println!("  After alloc 600: free={}, used={}, peak={}", s1.free_blocks, s1.used_blocks, s1.peak_used);
+    println!(
+        "  After alloc 600: free={}, used={}, peak={}",
+        s1.free_blocks, s1.used_blocks, s1.peak_used
+    );
 
     // Second wave: allocate 300 more (total 900 — peak)
     let wave2 = pool.allocate_batch(300).unwrap();
     let s2 = pool.stats();
-    println!("  After alloc 300: free={}, used={}, peak={}", s2.free_blocks, s2.used_blocks, s2.peak_used);
+    println!(
+        "  After alloc 300: free={}, used={}, peak={}",
+        s2.free_blocks, s2.used_blocks, s2.peak_used
+    );
 
     // Free wave2 — peak stays at 900
     pool.free_batch(&wave2).unwrap();
     let s3 = pool.stats();
-    println!("  After free 300:  free={}, used={}, peak={} (peak preserved)", s3.free_blocks, s3.used_blocks, s3.peak_used);
+    println!(
+        "  After free 300:  free={}, used={}, peak={} (peak preserved)",
+        s3.free_blocks, s3.used_blocks, s3.peak_used
+    );
 
     // Utilization
     println!("  Utilization: {:.1}%", pool.utilization() * 100.0);
@@ -113,7 +125,14 @@ fn demo_cow_headroom() {
     println!("  After exhausting available: free={}", pool.free_count());
     println!("  Pool returns OutOfMemory for new alloc (reserved blocks protected)");
     let result = pool.allocate();
-    println!("  pool.allocate() → {}", if result.is_err() { "Err(OutOfMemory) ✓" } else { "Ok (unexpected)" });
+    println!(
+        "  pool.allocate() → {}",
+        if result.is_err() {
+            "Err(OutOfMemory) ✓"
+        } else {
+            "Ok (unexpected)"
+        }
+    );
     println!();
 
     pool.free_batch(&all).unwrap();
@@ -133,7 +152,11 @@ fn demo_kvcache_stats() {
     let mut cache = KvCache::new(config).unwrap();
 
     println!("  Created KvCache: {} total blocks", cache.total_blocks());
-    println!("  Free: {}, Used: {}", cache.free_blocks(), cache.used_blocks());
+    println!(
+        "  Free: {}, Used: {}",
+        cache.free_blocks(),
+        cache.used_blocks()
+    );
 
     // Simulate allocating blocks for a batch
     let mut allocated = Vec::new();
@@ -143,14 +166,22 @@ fn demo_kvcache_stats() {
         }
     }
     println!("  After allocating 32 blocks:");
-    println!("  Free: {}, Used: {}", cache.free_blocks(), cache.used_blocks());
+    println!(
+        "  Free: {}, Used: {}",
+        cache.free_blocks(),
+        cache.used_blocks()
+    );
     println!("  Utilization: {:.1}%", cache.utilization() * 100.0);
 
     // Free them
     for id in &allocated {
         cache.free_block(*id).unwrap();
     }
-    println!("  After freeing: Free={}, Used={}", cache.free_blocks(), cache.used_blocks());
+    println!(
+        "  After freeing: Free={}, Used={}",
+        cache.free_blocks(),
+        cache.used_blocks()
+    );
     println!();
 
     println!("Done. See `cargo bench --bench scheduler` for perf numbers.");

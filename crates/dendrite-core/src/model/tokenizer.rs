@@ -22,14 +22,19 @@ pub struct Tokenizer {
 impl Tokenizer {
     /// Load a tokenizer from a tokenizer.json file.
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let inner = HfTokenizer::from_file(path.as_ref()).map_err(|e| {
-            DendriteError::ModelError(format!("Failed to load tokenizer: {}", e))
-        })?;
+        let inner = HfTokenizer::from_file(path.as_ref())
+            .map_err(|e| DendriteError::ModelError(format!("Failed to load tokenizer: {}", e)))?;
 
         // Try to get special token IDs
-        let bos_token_id = inner.token_to_id("<s>").or_else(|| inner.token_to_id("<|begin_of_text|>"));
-        let eos_token_id = inner.token_to_id("</s>").or_else(|| inner.token_to_id("<|end_of_text|>"));
-        let pad_token_id = inner.token_to_id("<pad>").or_else(|| inner.token_to_id("<|pad|>"));
+        let bos_token_id = inner
+            .token_to_id("<s>")
+            .or_else(|| inner.token_to_id("<|begin_of_text|>"));
+        let eos_token_id = inner
+            .token_to_id("</s>")
+            .or_else(|| inner.token_to_id("<|end_of_text|>"));
+        let pad_token_id = inner
+            .token_to_id("<pad>")
+            .or_else(|| inner.token_to_id("<|pad|>"));
 
         Ok(Self {
             inner,
@@ -64,9 +69,10 @@ impl Tokenizer {
     ///
     /// Vector of token IDs
     pub fn encode(&self, text: &str, add_bos: bool) -> Result<Vec<u32>> {
-        let encoding = self.inner.encode(text, false).map_err(|e| {
-            DendriteError::ModelError(format!("Failed to encode text: {}", e))
-        })?;
+        let encoding = self
+            .inner
+            .encode(text, false)
+            .map_err(|e| DendriteError::ModelError(format!("Failed to encode text: {}", e)))?;
 
         let mut ids: Vec<u32> = encoding.get_ids().to_vec();
 
@@ -99,9 +105,9 @@ impl Tokenizer {
     ///
     /// Decoded text
     pub fn decode(&self, ids: &[u32], skip_special: bool) -> Result<String> {
-        self.inner.decode(ids, skip_special).map_err(|e| {
-            DendriteError::ModelError(format!("Failed to decode tokens: {}", e))
-        })
+        self.inner
+            .decode(ids, skip_special)
+            .map_err(|e| DendriteError::ModelError(format!("Failed to decode tokens: {}", e)))
     }
 
     /// Decode a single token to text.

@@ -3,6 +3,8 @@
 //! This module provides quantization schemes for reducing memory usage and
 //! improving throughput on supported hardware.
 //!
+//! Includes TurboQuant-style KV cache compression with packed 4-bit and 2-bit formats.
+//!
 //! # Supported Formats
 //!
 //! - **FP8 (E4M3)**: 8-bit floating point for NVIDIA Hopper/Ada GPUs
@@ -46,6 +48,57 @@ mod mxfp8;
 pub use fp8::{Fp8Config, Fp8Format, QuantizedTensor};
 pub use fp8_linear::{quantize_attention_projs, Fp8Linear};
 pub use mxfp8::{quantize_weights_mxfp8, MxFp8Tensor, DEFAULT_BLOCK_SIZE};
+
+use crate::error::Result;
+use candle_core::{Device, Tensor};
+
+/// Unpack 4-bit indices from uint8 bytes.
+///
+/// Reverses the packing: `(high_nibble << 4) | low_nibble`
+///
+/// Returns Uint8 tensor with values in `[0, 15]`.
+pub fn unpack_4bit(packed: &Tensor, original_dim: usize) -> Result<Tensor> {
+    let device = packed.device();
+    let shape = packed.shape();
+    let flat = packed.flatten_all()?;
+    let packed_data = flat.to_vec1::<u8>()?;
+
+    let mut unpacked = Vec::with_capacity(packed_data.len() * 2);
+    for &byte in &packed_data {
+        unpacked.push((byte >> 4) & 0x0F);
+        unpacked.push(byte & 0x0F);
+    }
+
+    let mut new_shape = shape.dims().to_vec();
+    let last = new_shape.len() - 1;
+    new_shape[last] = original_dim;
+    Tensor::from_slice(&unpacked, new_shape.as_slice(), device).map_err(|e| e.into())
+}
+
+/// Unpack 2-bit indices from uint8 bytes.
+///
+/// Reverses the packing: `(a << 6) | (b << 4) | (c << 2) | d`
+///
+/// Returns Uint8 tensor with values in `[0, 3]`.
+pub fn unpack_2bit(packed: &Tensor, original_dim: usize) -> Result<Tensor> {
+    let device = packed.device();
+    let shape = packed.shape();
+    let flat = packed.flatten_all()?;
+    let packed_data = flat.to_vec1::<u8>()?;
+
+    let mut unpacked = Vec::with_capacity(packed_data.len() * 4);
+    for &byte in &packed_data {
+        unpacked.push((byte >> 6) & 0x03);
+        unpacked.push((byte >> 4) & 0x03);
+        unpacked.push((byte >> 2) & 0x03);
+        unpacked.push(byte & 0x03);
+    }
+
+    let mut new_shape = shape.dims().to_vec();
+    let last = new_shape.len() - 1;
+    new_shape[last] = original_dim;
+    Tensor::from_slice(&unpacked, new_shape.as_slice(), device).map_err(|e| e.into())
+}
 
 /// Quantization format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

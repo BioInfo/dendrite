@@ -19,10 +19,10 @@
 //! ```
 
 use candle_core::{Device, Tensor};
-use dendrite_core::attention::{ReferenceBackend, AttentionConfig};
-use dendrite_core::cache::{PageFormat, PagePool, KvCacheConfig};
+use dendrite_core::attention::{AttentionConfig, ReferenceBackend};
+use dendrite_core::cache::{KvCacheConfig, PageFormat, PagePool};
 use dendrite_core::model::{ModelConfig, Transformer};
-use dendrite_core::quantization::{unpack_4bit, unpack_2bit};
+use dendrite_core::quantization::{unpack_2bit, unpack_4bit};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
@@ -44,10 +44,7 @@ fn main() -> anyhow::Result<()> {
         .map(|e| e.path().to_string_lossy().to_string())
         .unwrap_or_else(|| "/home/bioinfo/models/tinyllama-1.1b".to_string());
 
-    let model_dir = args
-        .get(1)
-        .map(|s| s.to_string())
-        .unwrap_or(default_path);
+    let model_dir = args.get(1).map(|s| s.to_string()).unwrap_or(default_path);
     let model_path = Path::new(&model_dir);
 
     println!("\n╔════════════════════════════════════════════════════╗");
@@ -133,22 +130,27 @@ fn main() -> anyhow::Result<()> {
     // Generate with proper KV caching
     println!("\n--- Generation with KV Cache ---");
     let gen_start = Instant::now();
-    let generated = tokio::runtime::Runtime::new()?.block_on(async {
-        transformer.generate(&prompt_tokens, 20, 0.0).await
-    })?;
+    let generated = tokio::runtime::Runtime::new()?
+        .block_on(async { transformer.generate(&prompt_tokens, 20, 0.0).await })?;
     let gen_time = gen_start.elapsed();
 
     let num_new_tokens = generated.len() - prompt_tokens.len();
     let tokens_per_sec = num_new_tokens as f64 / gen_time.as_secs_f64();
 
     println!("Generation complete!");
-    println!("  Generated {} new tokens in {:.2}ms", num_new_tokens, gen_time.as_secs_f64() * 1000.0);
+    println!(
+        "  Generated {} new tokens in {:.2}ms",
+        num_new_tokens,
+        gen_time.as_secs_f64() * 1000.0
+    );
     println!("  Throughput: {:.1} tokens/s", tokens_per_sec);
 
     // Context Window Scaling Benchmark
     println!("\n--- Context Window Scaling ---");
-    println!("{:>8} | {:>10} | {:>10} | {:>10} | {:>12} | {:>12}",
-        "Context", "Prefill", "Decode", "tok/s", "FP16 KV", "TQ4 KV");
+    println!(
+        "{:>8} | {:>10} | {:>10} | {:>10} | {:>12} | {:>12}",
+        "Context", "Prefill", "Decode", "tok/s", "FP16 KV", "TQ4 KV"
+    );
     println!("{}", "-".repeat(80));
 
     let kv_heads = config.num_key_value_heads;
@@ -165,9 +167,7 @@ fn main() -> anyhow::Result<()> {
         let mut cache = transformer.create_cache();
 
         // Prefill
-        let prefill_input = Tensor::from_slice(
-            &long_prompt, (1, long_prompt.len()), &device
-        )?;
+        let prefill_input = Tensor::from_slice(&long_prompt, (1, long_prompt.len()), &device)?;
         let prefill_start = Instant::now();
         let logits = tokio::runtime::Runtime::new()?
             .block_on(transformer.forward_with_cache(&prefill_input, &mut cache))?;
@@ -213,7 +213,12 @@ fn main() -> anyhow::Result<()> {
             .block_on(transformer.forward_with_cache(&input, &mut cache))?;
         let step_ms = step_start.elapsed().as_secs_f64() * 1000.0;
         current_token = transformer.sample(&logits, 0.0)?;
-        println!("  Step {}: {:.2}ms (cache: {} tokens)", i + 1, step_ms, cache.seq_len());
+        println!(
+            "  Step {}: {:.2}ms (cache: {} tokens)",
+            i + 1,
+            step_ms,
+            cache.seq_len()
+        );
     }
 
     // Summary
@@ -240,7 +245,10 @@ fn demonstrate_turboquant_pages(device: &Device, head_dim: usize) -> anyhow::Res
 
     // Create 4-bit packed indices (2 values per byte)
     let packed_dim = head_dim / 2;
-    println!("  4-bit packed: shape [2, {}, {}, {}]", kv_heads, page_size, packed_dim);
+    println!(
+        "  4-bit packed: shape [2, {}, {}, {}]",
+        kv_heads, page_size, packed_dim
+    );
 
     // Simulate packed data: all valid 4-bit indices [0-15]
     let mut packed_data = Vec::new();
@@ -263,7 +271,10 @@ fn demonstrate_turboquant_pages(device: &Device, head_dim: usize) -> anyhow::Res
     let full_bytes = (2 * kv_heads * page_size * head_dim) as f64 * 2.0; // fp16
     let packed_bytes = (2 * kv_heads * page_size * packed_dim) as f64 * 1.0; // uint8
     let ratio = full_bytes / packed_bytes;
-    println!("  Memory ratio: {:.2}x ({:.0} → {:.0} bytes)", ratio, full_bytes, packed_bytes);
+    println!(
+        "  Memory ratio: {:.2}x ({:.0} → {:.0} bytes)",
+        ratio, full_bytes, packed_bytes
+    );
 
     // Show 2-bit compression too
     let packed_2bit_dim = head_dim / 4;
@@ -274,16 +285,26 @@ fn demonstrate_turboquant_pages(device: &Device, head_dim: usize) -> anyhow::Res
         packed_2bit_data.push(byte);
     }
 
-    let packed_2bit_i32 = Tensor::from_vec(packed_2bit_data, (2, kv_heads, page_size, packed_2bit_dim), device)?;
+    let packed_2bit_i32 = Tensor::from_vec(
+        packed_2bit_data,
+        (2, kv_heads, page_size, packed_2bit_dim),
+        device,
+    )?;
     let packed_2bit = packed_2bit_i32.to_dtype(candle_core::DType::U8)?;
 
     let unpacked_2bit = dendrite_core::quantization::unpack_2bit(&packed_2bit, head_dim)?;
-    println!("\n  2-bit packed: shape [2, {}, {}, {}]", kv_heads, page_size, packed_2bit_dim);
+    println!(
+        "\n  2-bit packed: shape [2, {}, {}, {}]",
+        kv_heads, page_size, packed_2bit_dim
+    );
     println!("  Unpacked 2-bit shape: {:?}", unpacked_2bit.dims());
 
     let packed_2bit_bytes = (2 * kv_heads * page_size * packed_2bit_dim) as f64;
     let ratio_2bit = full_bytes / packed_2bit_bytes;
-    println!("  Memory ratio: {:.2}x ({:.0} → {:.0} bytes)", ratio_2bit, full_bytes, packed_2bit_bytes);
+    println!(
+        "  Memory ratio: {:.2}x ({:.0} → {:.0} bytes)",
+        ratio_2bit, full_bytes, packed_2bit_bytes
+    );
 
     Ok(())
 }

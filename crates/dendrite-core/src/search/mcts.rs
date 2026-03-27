@@ -253,18 +253,14 @@ impl MctsSearch {
         let mut child_indices = Vec::with_capacity(expansion.actions.len());
 
         for (i, &action) in expansion.actions.iter().enumerate() {
-            let prior = priors.map(|p| p[i]).unwrap_or(1.0 / expansion.actions.len() as f32);
+            let prior = priors
+                .map(|p| p[i])
+                .unwrap_or(1.0 / expansion.actions.len() as f32);
 
             // Create placeholder NodeId (actual tree node created externally)
             let child_node_id = NodeId::new();
 
-            let child = MctsNode::child(
-                child_node_id,
-                action,
-                node_idx,
-                parent_depth + 1,
-                prior,
-            );
+            let child = MctsNode::child(child_node_id, action, node_idx, parent_depth + 1, prior);
 
             let child_idx = self.nodes.len();
             self.node_map.insert(child_node_id, child_idx);
@@ -328,7 +324,9 @@ impl MctsSearch {
             return Vec::new();
         }
 
-        let total_visits: u32 = root.children.iter()
+        let total_visits: u32 = root
+            .children
+            .iter()
             .map(|&idx| self.nodes[idx].stats.visits)
             .sum();
 
@@ -336,10 +334,13 @@ impl MctsSearch {
             return Vec::new();
         }
 
-        root.children.iter()
+        root.children
+            .iter()
             .filter_map(|&idx| {
                 let child = &self.nodes[idx];
-                child.action.map(|a| (a, child.stats.visits as f32 / total_visits as f32))
+                child
+                    .action
+                    .map(|a| (a, child.stats.visits as f32 / total_visits as f32))
             })
             .collect()
     }
