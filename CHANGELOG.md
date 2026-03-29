@@ -102,7 +102,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 | Metric | Value |
 |--------|-------|
-| Tests | **348** passing |
+| Tests | **359** passing |
 | Crates | 3 (`dendrite`, `dendrite-core`, `dendrite-ffi`) |
 | Milestones complete | M1–M7 ✅ |
 | Active milestone | M8 (Launch) |
