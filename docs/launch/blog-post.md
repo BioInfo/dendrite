@@ -99,7 +99,7 @@ These aren't competing products. They're optimized for different workloads. I us
 
 ## What's Missing
 
-Dendrite is v0.1. The core tree KV cache and fork semantics are solid (328 tests, including property-based testing for the copy-on-write invariants). But there's work left:
+Dendrite is v0.1. The core tree KV cache and fork semantics are solid (359 tests, including property-based testing for the copy-on-write invariants). But there's work left:
 
 FP8 quantization (MXFP8 block scaling, Fp8Linear/Fp8Attention/Fp8SwiGluMlp) is implemented with a TE FFI stub for Transformer Engine hardware. End-to-end FP8 numeric agreement with FP16 is verified (<5% relative MAE). Perplexity validation on real safetensors weights is deferred until DGX access.
 
@@ -119,7 +119,7 @@ Dendrite is an experiment in building infrastructure that treats branching as a 
 
 Maybe this matters. Maybe it doesn't. I'll find out when people try to use it.
 
-The code is MIT licensed. 328 tests pass. Fork latency is 500 nanoseconds. Continuous batching (Orca algorithm) mixes decode + prefill in every forward pass step. If that's useful to you, I'd love to hear about it.
+The code is MIT licensed. 359 tests pass. Fork latency is 500 nanoseconds. Continuous batching (Orca algorithm) mixes decode + prefill in every forward pass step. If that's useful to you, I'd love to hear about it.
 
 github.com/BioInfo/dendrite
 

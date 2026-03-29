@@ -80,7 +80,7 @@ Memory is duplicated **only when branches diverge** and **only at block granular
 | FP8 Quantization | 🔄 In Progress | E4M3/E5M2/MXFP8 |
 | FlashInfer FFI | 🔄 In Progress | Paged attention kernels |
 
-**278 tests passing** | **40.8 tok/s** on NVIDIA GB10 (DGX Spark) with TinyLlama-1.1B
+**359 tests passing** | **40.8 tok/s** on NVIDIA GB10 (DGX Spark) with TinyLlama-1.1B
 
 ### TurboQuant Integration
 

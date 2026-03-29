@@ -97,7 +97,7 @@ When NOT to use Dendrite:
 **9/**
 Built in Rust with Candle. MIT licensed.
 
-328 tests. FP8 quantization (MXFP8 block scaling). Continuous batching. Criterion benchmark suite.
+359 tests. FP8 quantization (MXFP8 block scaling). Continuous batching. Criterion benchmark suite.
 
 github.com/BioInfo/dendrite
 
@@ -111,13 +111,13 @@ Happy to answer architecture questions. 👇
 >
 > Built for AI agents doing Tree-of-Thought / MCTS. KV cache is a tree of paged CoW blocks — fork is just a pointer copy.
 >
-> 328 tests, MIT licensed, continuous batching, FP8 quant.
+> 359 tests, MIT licensed, continuous batching, FP8 quant.
 > github.com/BioInfo/dendrite
 
 ---
 
 ## Timing
 
-Same as HN: Tuesday-Thursday, 9–11 AM EST for maximum reach.
+Same as HN: Mon Mar 30, ~9:30 AM EST. Post HN first.
 
-Post HN first, then tweet with HN link included in reply to thread for social proof.
+Post HN first (use hn-dendrite-draft.md), then tweet with HN link in reply to thread for social proof.
