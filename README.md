@@ -4,6 +4,8 @@
 
 Dendrite is a specialized LLM inference engine designed for agentic workloads that require exploring multiple reasoning paths simultaneously. Unlike traditional inference engines that optimize for single-sequence throughput, Dendrite provides constant-time forking of inference state, enabling efficient tree-of-thought, MCTS, and beam search algorithms.
 
+![Dendrite Demo](assets/demo.gif)
+
 ## Why Dendrite? (vs vLLM/SGLang)
 
 **TL;DR:** If your agent explores multiple reasoning paths, Dendrite is 1000-10000x faster at branching.
