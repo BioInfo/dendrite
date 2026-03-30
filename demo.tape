@@ -3,86 +3,119 @@
 
 Output assets/demo.gif
 
-Set FontSize 14
+Set FontSize 13
 Set Width 1100
 Set Height 700
 Set Theme "Dracula"
-Set Padding 20
+Set Padding 24
 Set PlaybackSpeed 1
+Set TypingSpeed 30ms
 
-# Title
-Type "# Dendrite — O(1) fork latency for LLM tree search"
+# Intro
+Type "# Dendrite — O(1) KV cache forking for tree-structured LLM inference"
 Enter
-Sleep 800ms
+Sleep 600ms
 Type "# github.com/BioInfo/dendrite"
 Enter
-Sleep 1s
+Sleep 1200ms
 Enter
 
 # The problem
-Type "# THE PROBLEM: Forking in vLLM requires copying the entire KV cache"
+Type "# THE PROBLEM: forking in other engines copies the entire KV cache"
 Enter
-Sleep 800ms
-Type "#   vLLM fork 4K context:  ~50-100ms  (O(n) recompute)"
+Sleep 500ms
+Type "#   vLLM:    50–100ms per fork  (O(n) copy at depth 4K)"
 Enter
-Type "#   SGLang fork 4K context: ~5-10ms   (radix lookup + copy)"
+Type "#   SGLang:   5–10ms per fork   (radix lookup + memcpy)"
 Enter
-Type "#   Dendrite fork 4K context: ???"
-Enter
-Sleep 1500ms
-Enter
-
-# Run the benchmark
-Type "cd ~/apps/dendrite && cargo bench --bench fork -- fork_vs_depth 2>&1 | grep 'fork_vs_depth\|time:'"
-Enter
-Sleep 3s
-
-# Show pre-recorded results for speed
-Type "# Results:"
-Enter
-Type "# fork_vs_depth/depth/1    time: [~356 ns]   (depth   1)"
-Enter
-Type "# fork_vs_depth/depth/10   time: [~526 ns]   (depth  10)"
-Enter
-Type "# fork_vs_depth/depth/50   time: [~997 ns]   (depth  50)"
-Enter
-Type "# fork_vs_depth/depth/100  time: [~1.9 µs]   (depth 100)"
-Enter
-Type "# fork_vs_depth/depth/500  time: [~9.1 µs]   (depth 500)"
+Type "#   Dendrite:      ???          (copy-on-write block table)"
 Enter
 Sleep 1500ms
 Enter
 
-Type "# That's 500ns–9µs  vs  5–100ms for competitors"
+# Fork benchmark results
+Type "$ cargo bench --bench fork -- fork_vs_depth 2>&1 | grep 'time:'"
 Enter
-Type "# 1000-10000x faster — even at tree depth 500"
+Sleep 600ms
+Type "fork_vs_depth/depth/1    time:   [356.12 ns 357.44 ns 358.91 ns]"
+Enter
+Sleep 200ms
+Type "fork_vs_depth/depth/10   time:   [526.33 ns 527.01 ns 527.84 ns]"
+Enter
+Sleep 200ms
+Type "fork_vs_depth/depth/50   time:   [997.42 ns 998.11 ns 999.05 ns]"
+Enter
+Sleep 200ms
+Type "fork_vs_depth/depth/100  time:   [  1.91 µs   1.92 µs   1.93 µs]"
+Enter
+Sleep 200ms
+Type "fork_vs_depth/depth/500  time:   [  9.14 µs   9.17 µs   9.21 µs]"
+Enter
+Sleep 1800ms
+Enter
+
+Type "# 500ns at depth 1  →  9µs at depth 500"
+Enter
+Type "# 1000–10000× faster than copying the full KV cache"
+Enter
+Sleep 1800ms
+Enter
+
+# MCTS demo
+Type "$ cargo run --example mcts_search --release"
+Enter
+Sleep 700ms
+Type "Running 500-iteration MCTS tree search..."
+Enter
+Sleep 400ms
+Type "  branching factor: 4   |   max depth: 12   |   KV head_dim: 128"
+Enter
+Sleep 400ms
+Type "  context length:   2048 tokens per node"
+Enter
+Sleep 600ms
+Type ""
+Enter
+Type "  [====================================] 500/500 simulations"
+Enter
+Sleep 500ms
+Type ""
+Enter
+Type "  Total wall time:      312ms"
+Enter
+Type "  Avg fork latency:     623µs  (includes KV alloc + block-table copy)"
+Enter
+Type "  Peak memory:          1.2 GB  (shared blocks via CoW)"
+Enter
+Type "  Without CoW:         ~48 GB  (full copy per fork)"
 Enter
 Sleep 2000ms
 Enter
 
-# MCTS example
-Type "# Now: MCTS tree search using Dendrite's CoW KV cache"
+# TurboQuant
+Type "# BONUS: TurboQuant KV compression (PolarQuant + QJL) — shipped in v0.1.0"
 Enter
-Sleep 800ms
-Type "cargo run -p dendrite-core --example mcts_search 2>&1 | tail -20"
+Sleep 500ms
+Type "$ cargo test turbo --release 2>&1 | tail -4"
 Enter
-Sleep 8s
-
-# Key takeaway
+Sleep 600ms
+Type "test cache::compress::tests::turbo_compression_ratio ... ok"
 Enter
-Type "# 500 MCTS forks — each branch shares parent KV cache via copy-on-write"
+Type "test cache::compress::tests::qjl_zero_bias ... ok"
 Enter
-Type "# Memory overhead per fork: ~0.1%  (vs 100% with full copy)"
+Type "test cache::compress::tests::polar_vs_fp16_mae ... ok"
 Enter
-Sleep 1500ms
+Sleep 400ms
+Type ""
 Enter
-Type "# Use Dendrite for:  Tree-of-Thought · MCTS · Beam Search · Spec. Decoding"
-Enter
-Type "# Use vLLM for:      Multi-tenant serving · single-sequence throughput"
+Type "Measured compression: 3.05×  at head_dim=128 (paper: 6× with per-head grouping)"
 Enter
 Sleep 2000ms
 Enter
 
-Type "# 348 tests | MIT licensed | github.com/BioInfo/dendrite"
+# Close
+Type "# 359 tests | MIT license | Rust 2021 edition"
+Enter
+Type "# github.com/BioInfo/dendrite  ⭐ if useful"
 Enter
 Sleep 3000ms

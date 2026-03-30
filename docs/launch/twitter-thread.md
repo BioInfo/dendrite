@@ -38,12 +38,11 @@ Dendrite treats fork as a first-class primitive. We *create* sharing — the KV 
 ---
 
 **4/**
-Fork = shallow copy of the block table + reference count increments.
+Fork = shallow copy of the block table + ref count increments.
 
-No KV data is copied until branches actually diverge. And when they do, only the diverged blocks get copied — not the entire context.
+No KV data copied until branches diverge. When they do, only diverged blocks are copied.
 
 ```rust
-let parent = cache.fork_sequence(node)?; // O(1)
 let child1 = cache.fork_sequence(parent)?; // O(1)
 let child2 = cache.fork_sequence(parent)?; // O(1)
 ```
