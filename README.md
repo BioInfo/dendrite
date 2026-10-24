@@ -4,7 +4,11 @@
 
 Dendrite is a specialized LLM inference engine designed for agentic workloads that require exploring multiple reasoning paths simultaneously. Unlike traditional inference engines that optimize for single-sequence throughput, Dendrite provides constant-time forking of inference state, enabling efficient tree-of-thought, MCTS, and beam search algorithms.
 
-![Dendrite Demo](assets/demo.gif)
+## Why Dendrite?
+
+Agents that branch (tree-of-thought, MCTS, beam search, many questions against one context) share a long prefix across every branch. Dendrite's cache is built around that shape: a fork copies a block table and bumps reference counts, and KV blocks are copied only when a branch writes into a shared one.
+
+**Correction (2026-10-24).** Earlier versions of this README and its benchmark pages compared Dendrite's fork against vLLM and SGLang "recomputing the prefix" and claimed 1,000-33,000x faster branching. That baseline was wrong. vLLM shares prefix KV blocks through automatic prefix caching, which is on by default in its V1 engine, and SGLang reuses them through RadixAttention. Neither recomputes a cached prefix on fork. Dendrite's 500 ns figure is the cost of its block-table bookkeeping measured on its own, and the GPU forward path does not use the paged cache yet. There is no end-to-end comparison against either engine. Until there is one, this README makes no speed claim against them.
 
 ## Key Features
 
