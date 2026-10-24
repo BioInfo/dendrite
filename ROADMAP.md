@@ -164,9 +164,7 @@
 ## Milestone 8: Launch (Weeks 15-16)
 **Goal:** Public release and community building
 
-- [x] Blog post: drafted (docs/launch/blog-post.md — needs Justin sign-off)
-- [x] Hacker News launch: drafted (docs/launch/hn-post.md — needs Justin sign-off)
-- [x] Twitter/X thread: drafted (docs/launch/twitter-thread.md — needs Justin sign-off)
+- [ ] Launch posts (blog, HN, X thread): drafts withdrawn 2026-10-24, they repeated the vLLM/SGLang comparison
 - [ ] Discord community setup
 - [ ] Demo GIF (asciinema — Justin action)
 - [ ] Tag v0.1.0 release

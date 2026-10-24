@@ -7,6 +7,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased] — v0.1.0
 
+### Corrected (2026-10-24)
+
+- Withdrew the vLLM and SGLang comparisons in README, BENCHMARKS.md and PRACTICAL_IMPACT.md. They assumed both engines recompute a shared prefix on fork. vLLM (automatic prefix caching, default in V1) and SGLang (RadixAttention) both reuse prefix KV blocks. Dendrite's fork latency figures measured block-table bookkeeping only.
+- Removed `docs/launch/` drafts, which repeated the same comparison.
+- Removed the demo GIF from the README; it showed the same vLLM/SGLang fork figures. `demo.tape` no longer names either engine.
+
 ### Added — Milestone 8: Launch Prep (2026-03-25)
 
 - **`PrefixCache`** (`cache/prefix_cache.rs`) — cascade attention block reuse via `RadixTree` + `BlockPool`
