@@ -21,14 +21,10 @@ Sleep 1200ms
 Enter
 
 # The problem
-Type "# THE PROBLEM: forking in other engines copies the entire KV cache"
+Type "# THE PROBLEM: a naive fork copies the entire KV cache, O(context)"
 Enter
 Sleep 500ms
-Type "#   vLLM:    50–100ms per fork  (O(n) copy at depth 4K)"
-Enter
-Type "#   SGLang:   5–10ms per fork   (radix lookup + memcpy)"
-Enter
-Type "#   Dendrite:      ???          (copy-on-write block table)"
+Type "#   Dendrite: copy the block table, share blocks until a branch writes"
 Enter
 Sleep 1500ms
 Enter

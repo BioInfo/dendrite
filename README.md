@@ -4,23 +4,11 @@
 
 Dendrite is a specialized LLM inference engine designed for agentic workloads that require exploring multiple reasoning paths simultaneously. Unlike traditional inference engines that optimize for single-sequence throughput, Dendrite provides constant-time forking of inference state, enabling efficient tree-of-thought, MCTS, and beam search algorithms.
 
-![Dendrite Demo](assets/demo.gif)
+## Why Dendrite?
 
-## Why Dendrite? (vs vLLM/SGLang)
+Agents that branch (tree-of-thought, MCTS, beam search, many questions against one context) share a long prefix across every branch. Dendrite's cache is built around that shape: a fork copies a block table and bumps reference counts, and KV blocks are copied only when a branch writes into a shared one.
 
-**TL;DR:** If your agent explores multiple reasoning paths, Dendrite is 1000-10000x faster at branching.
-
-| Scenario | vLLM | SGLang | Dendrite |
-|----------|------|--------|----------|
-| Fork 4K context | 50-100ms | 5-10ms | **3μs** |
-| 6-branch exploration | 300-600ms | 30-60ms | **18μs** |
-| MCTS (500 forks) | 25-50s | 2.5-5s | **1.5ms** |
-| Memory (6 branches, 4K prefix) | 6GB | ~2GB | **1.1GB** |
-
-**Use Dendrite for:** Tree-of-Thought, MCTS, Beam Search, Speculative Decoding, Multi-Agent
-**Use vLLM for:** Single-sequence generation, simple chat (higher throughput)
-
-See [BENCHMARKS.md](BENCHMARKS.md) and [PRACTICAL_IMPACT.md](PRACTICAL_IMPACT.md) for details.
+**Correction (2026-10-24).** Earlier versions of this README and its benchmark pages compared Dendrite's fork against vLLM and SGLang "recomputing the prefix" and claimed 1,000-33,000x faster branching. That baseline was wrong. vLLM shares prefix KV blocks through automatic prefix caching, which is on by default in its V1 engine, and SGLang reuses them through RadixAttention. Neither recomputes a cached prefix on fork. Dendrite's 500 ns figure is the cost of its block-table bookkeeping measured on its own, and the GPU forward path does not use the paged cache yet. There is no end-to-end comparison against either engine. Until there is one, this README makes no speed claim against them.
 
 ## Key Features
 
@@ -34,7 +22,7 @@ See [BENCHMARKS.md](BENCHMARKS.md) and [PRACTICAL_IMPACT.md](PRACTICAL_IMPACT.md
 ## How It Works
 
 ```
-Traditional (vLLM/SGLang):               Dendrite (Copy-on-Write):
+Naive fork (full copy):                  Dendrite (Copy-on-Write):
 
 Fork = Copy entire KV cache              Fork = Copy block table pointers
        O(context_length)                        O(num_blocks) ≈ O(1)
@@ -47,7 +35,7 @@ Fork = Copy entire KV cache              Fork = Copy block table pointers
          ▼                                  ▼  ▼  ▼  ▼
 ┌─────────────────────┐                  ┌──────────────────────┐
 │ Child: Copy 4K      │                  │ Physical Blocks      │
-│ [================]  │  ← 50-100ms      │ [B0][B1][B2][B3]     │
+│ [================]  │                  │ [B0][B1][B2][B3]     │
 └─────────────────────┘                  │ ref=2 (shared!)      │
                                          └──────────────────────┘
                                                     ▲
