@@ -18,8 +18,8 @@ Any alternative solutions or features you've considered.
 ## Use Case
 How would this feature be used? Include code examples if helpful.
 
-```rust
-// Example usage
+```python
+# Example usage
 ```
 
 ## Additional Context

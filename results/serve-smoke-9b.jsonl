@@ -1,0 +1,3 @@
+{"request": "first", "ms": 13094, "state_tokens": null, "answers": {"urgent": {"type": "noul", "noul": 0.4148}, "kind": {"type": "choice", "choice": "guide", "confidence": 0.4053, "probabilities": {"guide": 0.6035, "reference": 0.2633, "changelog": 0.1332}}}}
+{"request": "grown", "ms": 540, "state_tokens": null, "answers": {"urgent": {"type": "noul", "noul": 0.3442}, "kind": {"type": "choice", "choice": "guide", "confidence": 0.4927, "probabilities": {"guide": 0.6618, "reference": 0.2271, "changelog": 0.1111}}}}
+{"checkpoints": {"checkpoints": 1, "checkpoint_tokens": 35328, "size": 8, "max_tokens": 131072, "extended": 1, "cold": 1, "skipped": 0, "saved_tokens": 35328, "oom_clears": 0}, "prefix_cache": {"hits": 0, "misses": 2}}

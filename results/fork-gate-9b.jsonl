@@ -1,0 +1,5 @@
+{"noise_floor_bf16_vs_fp32": 0.00482, "tol": 0.00963}
+{"state_tokens": 512, "questions": 16, "max_dp": 0.00686, "flips": 0}
+{"state_tokens": 2048, "questions": 16, "max_dp": 0.00855, "flips": 0}
+{"state_tokens": 8213, "questions": 16, "max_dp": 0.00554, "flips": 0}
+{"verdict": "PASS", "max_dp": 0.00855, "tol": 0.009631752967834473, "flips": 0, "questions": 48}

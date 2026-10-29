@@ -1,0 +1,3 @@
+{"state_tokens": 512, "questions": 16, "max_dp": 0.27756, "flips": 2}
+{"verdict": "FAIL", "max_dp": 0.27756, "tol": 0.01, "flips": 2, "questions": 16}
+{"selftest": "PASS (broken merge was caught)"}

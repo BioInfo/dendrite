@@ -1,0 +1,21 @@
+{"run": "jaredpalmer/kev-9b@db029f08b290afd9fee4aa4bbcd9ae48602d1eb0", "deltanet_mixers_patched": 24, "gemm_exact_rows": {"4096x12288": [1620, [2, 3, 4, 5, 6, 7]], "24576x4096": [2047, [2, 3, 4, 5, 6, 7]], "4096x4096": [1807, [2, 3, 4, 5, 6, 7]], "10240x4096": [1951, [2, 3, 4, 5, 6, 7]], "12352x4096": [1979, [2, 3, 4, 5, 6, 7]]}, "align": 64, "slack": 8, "query_rows": 512}
+{"appends_checked": 218, "raw_prefix_rate": 0.977, "checkpoint_hit_rate": 1.0}
+{"new_state_tokens": 16322, "full_prefix_ms": 5700.8}
+{"case": "append_64", "steps": 1, "old_state_tokens": 16317, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"appended_tokens": 5, "recomputed_tokens": 66, "full_prefix_ms": 5700.8, "advance_ms": 125.4, "speedup": 45.5}
+{"case": "append_256", "steps": 1, "old_state_tokens": 16110, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"appended_tokens": 212, "recomputed_tokens": 258, "full_prefix_ms": 5700.8, "advance_ms": 264.2, "speedup": 21.6}
+{"case": "append_1024", "steps": 1, "old_state_tokens": 15314, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"appended_tokens": 1008, "recomputed_tokens": 1026, "full_prefix_ms": 5700.8, "advance_ms": 463.9, "speedup": 12.3}
+{"case": "append_4096", "steps": 1, "old_state_tokens": 11901, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"appended_tokens": 4421, "recomputed_tokens": 4482, "full_prefix_ms": 5700.8, "advance_ms": 1569.3, "speedup": 3.6}
+{"case": "chain_4x1k", "steps": 4, "old_state_tokens": 11901, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"case": "token_split_16317", "steps": 1, "old_state_tokens": 16317, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"case": "token_split_16259", "steps": 1, "old_state_tokens": 16259, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"case": "token_split_16258", "steps": 1, "old_state_tokens": 16258, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"case": "token_split_15722", "steps": 1, "old_state_tokens": 15722, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"case": "token_split_14273", "steps": 1, "old_state_tokens": 14273, "cache_bit_identical": true, "tensors": 64, "worst_rel": 0.0, "kev_rows": [0.0, 0], "fork": [0.0, 0], "verdict": "PASS"}
+{"case": "control_no_advance", "steps": 1, "old_state_tokens": 15722, "cache_bit_identical": false, "tensors": 64, "worst_rel": 1.1930023, "kev_rows": [0.105798, 2], "fork": [0.106705, 1], "verdict": "FAIL"}
+{"case": "control_no_query_padding", "steps": 1, "old_state_tokens": 16317, "cache_bit_identical": false, "tensors": 64, "worst_rel": 0.0131212, "kev_rows": [0.005883, 1], "fork": [0.00384, 0], "verdict": "FAIL"}
+{"case": "control_no_gemm_padding", "steps": 1, "old_state_tokens": 15722, "cache_bit_identical": false, "tensors": 64, "worst_rel": 0.0152595, "kev_rows": [0.021012, 1], "fork": [0.038048, 0], "verdict": "FAIL"}
+{"gate": "PASS", "cases": 10, "misses": 0, "control_no_advance_caught": true, "control_no_padding_caught": true, "control_no_gemm_padding_caught": true}
