@@ -42,7 +42,7 @@ flashinfer_bindings.rs
 # Logs
 *.log
 
-# Python (if using for testing)
+# Python
 __pycache__/
 *.py[cod]
 .venv/
@@ -52,3 +52,11 @@ venv/
 *.profraw
 *.profdata
 coverage/
+
+# Gate and benchmark output written relative to the cwd (the published rows are results/*-9b.jsonl)
+progress.md
+results/bench.jsonl
+results/extend.jsonl
+results/serve.jsonl
+*.egg-info/
+AGENTS.md

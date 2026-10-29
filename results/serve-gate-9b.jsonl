@@ -1,0 +1,21 @@
+{"run": "jaredpalmer/kev-9b@db029f08b290afd9fee4aa4bbcd9ae48602d1eb0", "fused": true, "cuda_graphs": true, "install_s": 22.9, "graph_state": 1024, "kev_prefix_cache_size": 4}
+{"step": "grow_0", "state_tokens": 5791, "path": "cold", "expected": "cold", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 2737.3, "kev_ms": 2615.7, "verdict": "PASS"}
+{"step": "grow_1", "state_tokens": 6250, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 1122.0, "kev_ms": 2720.8, "verdict": "PASS"}
+{"step": "grow_2", "state_tokens": 6432, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 1078.8, "kev_ms": 2800.9, "verdict": "PASS"}
+{"step": "grow_3", "state_tokens": 7835, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 1442.1, "kev_ms": 3294.7, "verdict": "PASS"}
+{"step": "grow_4", "state_tokens": 8000, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 1132.6, "kev_ms": 3579.0, "verdict": "PASS"}
+{"step": "grow_5", "state_tokens": 10991, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 2626.8, "kev_ms": 5096.4, "verdict": "PASS"}
+{"step": "grow_6", "state_tokens": 11901, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 2006.3, "kev_ms": 5226.7, "verdict": "PASS"}
+{"step": "grow_7", "state_tokens": 14923, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 2806.0, "kev_ms": 6252.6, "verdict": "PASS"}
+{"step": "grow_8", "state_tokens": 15773, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 2154.0, "kev_ms": 6669.4, "verdict": "PASS"}
+{"step": "append_5_chars", "state_tokens": 15774, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 1877.7, "kev_ms": 6254.4, "verdict": "PASS"}
+{"step": "branch_a", "state_tokens": 8008, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 1215.1, "kev_ms": 3358.0, "verdict": "PASS"}
+{"step": "branch_b", "state_tokens": 8009, "path": "extended", "expected": "extended", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 1001.5, "kev_ms": 3291.7, "verdict": "PASS"}
+{"step": "repeat_branch_b", "state_tokens": 8009, "path": "exact", "expected": "exact", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 903.4, "kev_ms": 3318.8, "verdict": "PASS"}
+{"step": "short_state", "state_tokens": 408, "path": "skipped", "expected": "skipped", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 333.2, "kev_ms": 322.8, "verdict": "PASS"}
+{"step": "edit_middle", "state_tokens": 7839, "path": "cold", "expected": "cold", "bit_identical": true, "max_dp": 0.0, "dendrite_ms": 3369.7, "kev_ms": 3248.3, "verdict": "PASS"}
+{"step": "batch_6", "bit_identical": true, "paths": {"extended": 5, "cold": 0, "skipped": 1, "exact": 0}, "dendrite_ms": 12995.1, "verdict": "PASS"}
+{"checkpoints_intact": true, "checked": 6, "store": {"checkpoints": 6, "checkpoint_tokens": 126144, "size": 8, "max_tokens": 131072, "extended": 16, "cold": 3, "skipped": 2, "saved_tokens": 241472, "oom_clears": 0}}
+{"control": "no_advance", "caught": true, "max_dp": 0.22116783261299133}
+{"control": "no_gemm_padding", "caught": true, "max_dp": 0.009888172149658203}
+{"gate": "PASS", "steps": 16, "controls_caught": [true, true], "extended_median_ms": 1442.1, "kev_median_ms_same_requests": 3579.0, "peak_gib": 30.1}

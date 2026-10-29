@@ -23,14 +23,14 @@ What actually happened.
 
 ## Environment
 - OS: [e.g., Ubuntu 22.04]
-- Rust version: [e.g., 1.75.0]
-- Dendrite version: [e.g., 0.1.0]
-- CUDA version (if applicable): [e.g., 12.2]
-- GPU (if applicable): [e.g., RTX 4090]
+- Python, torch, transformers, flash-linear-attention versions
+- kev commit and checkpoint (e.g. jaredpalmer/kev-9b@db029f0)
+- Dendrite commit
+- CUDA version and GPU (e.g. 13.0, GB10)
 
 ## Minimal Reproduction
-```rust
-// Minimal code to reproduce the issue
+```python
+# Minimal code to reproduce the issue
 ```
 
 ## Additional Context

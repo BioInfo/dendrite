@@ -1,279 +1,123 @@
 # Dendrite
 
-**Agent-native inference engine with O(1) fork latency for tree-structured reasoning.**
+Faster serving for [kev](https://github.com/jaredpalmer/kev) decision models on hybrid Qwen3.5 backbones.
 
-Dendrite is a specialized LLM inference engine designed for agentic workloads that require exploring multiple reasoning paths simultaneously. Unlike traditional inference engines that optimize for single-sequence throughput, Dendrite provides constant-time forking of inference state, enabling efficient tree-of-thought, MCTS, and beam search algorithms.
+A kev request is one document (the state) and a set of yes/no, multiple-choice or rating questions about it. Kev runs the state once, then one branch per question on top of the cached state. Dendrite changes two things about how that works:
 
-## Why Dendrite?
+- **Question branches share one copy of the state.** Kev copies the state's attention cache once per question. `dendrite.fork` keeps a single copy and runs every branch against it with cascade attention, so branch time stops growing with the length of the document.
+- **A state that grows is not re-run.** Kev's server reuses a state only when it repeats exactly. A case history, an agent trajectory or any document that gets appended to misses every time and pays for the whole state again. `dendrite.extend` continues a cached state with only the new tokens, and the result is bit-identical to running the whole state from scratch. `dendrite.serve` wires that into kev's server.
 
-Agents that branch (tree-of-thought, MCTS, beam search, many questions against one context) share a long prefix across every branch. Dendrite's cache is built around that shape: a fork copies a block table and bumps reference counts, and KV blocks are copied only when a branch writes into a shared one.
+Kev is not modified. Dendrite patches it at runtime and every answer is checked against kev's own path.
 
-**Correction (2026-10-24).** Earlier versions of this README and its benchmark pages compared Dendrite's fork against vLLM and SGLang "recomputing the prefix" and claimed 1,000-33,000x faster branching. That baseline was wrong. vLLM shares prefix KV blocks through automatic prefix caching, which is on by default in its V1 engine, and SGLang reuses them through RadixAttention. Neither recomputes a cached prefix on fork. Dendrite's 500 ns figure is the cost of its block-table bookkeeping measured on its own, and the GPU forward path does not use the paged cache yet. There is no end-to-end comparison against either engine. Until there is one, this README makes no speed claim against them.
+**Status: experimental.** Everything below was measured on one machine (an NVIDIA DGX Spark, GB10) with one model (Kev-9B). Nothing has been tested on another GPU yet.
 
-## Key Features
+## Results
 
-- **O(1) Fork Latency**: Create reasoning branches without copying the KV cache using copy-on-write semantics
-- **Tree-Structured KV Cache**: Share memory across branches with reference counting
-- **PagedAttention**: Memory-efficient KV cache management with 16-token blocks
-- **MCTS & Beam Search**: Built-in tree search algorithms with UCT scoring
-- **FlashInfer Integration**: High-performance attention kernels with cascade support
-- **Grammar Constraints**: Structured output via llguidance integration
+Kev-9B (`jaredpalmer/kev-9b@db029f0`), bf16, kev's fused kernels, on a GB10 that was also serving other models during the runs. Raw rows are in [`results/`](results/).
 
-## How It Works
+**Question branches** (`dendrite.fork`, 64 questions on one cached state, median of 5):
 
-```
-Naive fork (full copy):                  Dendrite (Copy-on-Write):
+| State tokens | kev | Dendrite | Speedup |
+|---|---|---|---|
+| 1,024 | 795 ms | 565 ms | 1.4x |
+| 4,096 | 2,375 ms | 577 ms | 4.1x |
+| 8,192 | 5,814 ms | 589 ms | 9.9x |
+| 16,384 | 7,116 ms | 615 ms | 11.6x |
 
-Fork = Copy entire KV cache              Fork = Copy block table pointers
-       O(context_length)                        O(num_blocks) ≈ O(1)
+Fork is exact up to floating-point reassociation, not bit-exact. Its gate requires every answer's argmax to agree with kev and every probability to stay within twice kev's own bf16-versus-fp32 difference. It passes with little room: max |dp| 0.0086 against a tolerance of 0.0096, 0 flips in 48 questions. The gate's selftest breaks the attention merge on purpose and the gate catches it (max |dp| 0.28, 2 flips). Fork holds more memory than kev's default path, 3.6 GiB against 0.8 GiB at 16k x 64, because kev runs its branches in small chunks. Kev with the chunking lifted runs out of memory at 8k x 64.
 
-┌─────────────────────┐                  ┌─────────────────────┐
-│ Parent: 4K tokens   │                  │ Block Table (Parent)│
-│ [================]  │                  │ [0][1][2][3]        │
-└─────────────────────┘                  └──│──│──│──│────────┘
-         │ fork                             │  │  │  │
-         ▼                                  ▼  ▼  ▼  ▼
-┌─────────────────────┐                  ┌──────────────────────┐
-│ Child: Copy 4K      │                  │ Physical Blocks      │
-│ [================]  │                  │ [B0][B1][B2][B3]     │
-└─────────────────────┘                  │ ref=2 (shared!)      │
-                                         └──────────────────────┘
-                                                    ▲
-                                         ┌──│──│──│──│────────┐
-                                         │ [0][1][2][3]        │
-                                         │ Block Table (Child) │ ← 500ns
-                                         └─────────────────────┘
-```
+**Growing states** (`dendrite.extend`, appends to a 16k-token state; a full state pass takes 5,701 ms):
 
-Memory is duplicated **only when branches diverge** and **only at block granularity** (16 tokens).
+| Tokens appended | Time | Speedup |
+|---|---|---|
+| 5 | 125 ms | 45x |
+| 212 | 264 ms | 22x |
+| 1,008 | 464 ms | 12x |
+| 4,421 | 1,569 ms | 3.6x |
 
-## Project Status
+Every cache tensor and every answer probability is bit-identical to a full state pass, in 10 of 10 cases: paragraph appends, a chain of four appends, and token-level splits at every offset class. The gate's three planted faults (DeltaNet state not advanced, no query padding, no GEMM padding) all fail it. On 218 real paragraph appends, 100% continued a stored checkpoint.
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| KV Cache (CoW) | ✅ Complete | O(1) fork with reference counting |
-| Paged KV Cache | ✅ Complete | Memory-efficient page pool |
-| Tree State | ✅ Complete | Radix tree for prefix sharing |
-| Scheduler | ✅ Complete | Fair batch scheduling |
-| Attention Backend | ✅ Complete | Reference + Flash Attention |
-| Transformer | ✅ Complete | Full LLaMA architecture |
-| Tokenizer | ✅ Complete | HuggingFace tokenizers |
-| MCTS Search | ✅ Complete | UCT scoring |
-| Beam Search | ✅ Complete | Top-k beams |
-| Grammar Constraints | ✅ Complete | llguidance integration |
-| GPU Inference | ✅ Complete | candle-flash-attn |
-| TurboQuant KV Compression | ✅ Complete | 3.88x cache compression (2-4 bit) |
-| Prefix Cache | ✅ Complete | Cascade attention block reuse via RadixTree |
-| Qwen3 Support | ✅ Complete | QK normalization + weight loading |
-| FP8 Quantization | 🔄 In Progress | E4M3/E5M2/MXFP8 |
-| FlashInfer FFI | 🔄 In Progress | Paged attention kernels |
+**Serving** (`dendrite.serve`, kev's server defaults: bf16, fused kernels, CUDA graphs): a session of 15 requests on one growing document plus one batch of six, each answer compared with kev answering the same request cold. All answers are bit-identical. Requests that grew a 6k-16k-token state took a median 1.44 s against kev's 3.58 s with 16 questions each. Most of the remaining time is kev's own question branches, because the server does not use `dendrite.fork` yet. Over HTTP, a 35k-token document took 13.1 s cold (first request, warmup included) and 0.54 s after one paragraph was appended.
 
-**359 tests passing** | **40.8 tok/s** on NVIDIA GB10 (DGX Spark) with TinyLlama-1.1B
+## How the exact reuse works
 
-### TurboQuant Integration
+A kev state is a token sequence, so a new state that starts with a cached state's tokens can continue from it: attention layers append the new keys and values, and the Gated DeltaNet layers carry their convolution window and recurrent state forward. Getting the same bits as a full pass took three more things, each found by comparing layer by layer:
 
-Dendrite integrates [TurboQuant](https://github.com/BioInfo/turboquant-dgx) for KV cache compression, enabling 3.88x memory reduction. Unlike HuggingFace transformers (which forces dequantization at every attention call, making it 3.7x *slower*), Dendrite operates directly on quantized indices via `PageFormat::TurboQuant4Bit`.
+1. **64-token alignment.** The chunked delta-rule kernel works in blocks of 64, so a continuation has to start on a multiple of 64. Dendrite keeps a checkpoint at the last 64-aligned point at least 8 tokens before the state's end, which also absorbs the tokenizer re-merging tokens at the join.
+2. **Query padding.** With few query rows, flash attention switches to a split-KV schedule that sums in a different order. Extension passes pad their queries with zero rows to at least 512.
+3. **GEMM row padding.** cuBLAS picks a different algorithm for some row counts. Which counts depends only on the weight shape, so `extend.install()` measures the exact row counts per projection shape when the model loads (about 30 s on Kev-9B) and pads inputs to the next one. The calibration belongs to the GPU and library versions it ran on.
 
-- Qwen3-32B at 1M token context on 128GB GPU (impossible at FP16)
-- Validated across Qwen3-0.6B through 32B and Mistral-7B
-- See the [full write-up](https://ai.rundatarun.io) for 1,000-experiment results
+## Limits
 
-## Architecture
+- One GPU (GB10) and one model size (Kev-9B) measured. Kev-27B in bf16 does not fit beside the other services on that machine and has not been run through these gates.
+- The fork gate's margin is thin. A new GPU or model needs its own tolerance, measured the same way.
+- `dendrite.serve` handles states longer than kev's graphed state pass (1,024 tokens). Shorter states and exact repeats go to kev unchanged.
+- Checkpoints cost memory. Each one keeps its state's attention cache alive (about 0.5 GiB for 16k tokens on Kev-9B). The store holds 8 checkpoints and 131,072 tokens by default.
+- A state edited before its last checkpoint is a miss and runs in full.
+- FP8 weights were measured and are not included: 1.46-1.72x faster state passes, but 17 of 1,440 test answers changed.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         dendrite                                │
-│                    (High-level API)                             │
-├─────────────────────────────────────────────────────────────────┤
-│                      dendrite-core                              │
-│  ┌─────────┐  ┌──────────┐  ┌───────────┐  ┌─────────────────┐ │
-│  │  Cache  │  │   Tree   │  │ Scheduler │  │     Model       │ │
-│  │  (CoW)  │  │  State   │  │ (Batch)   │  │  (Transformer)  │ │
-│  └─────────┘  └──────────┘  └───────────┘  └─────────────────┘ │
-│  ┌─────────────────────────┐  ┌─────────────────────────────┐  │
-│  │        Search           │  │        Grammar              │  │
-│  │  (MCTS, Beam, UCT)      │  │  (llguidance constraints)   │  │
-│  └─────────────────────────┘  └─────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────────┤
-│                      dendrite-ffi                               │
-│              (FlashInfer + CUDA bindings)                       │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Install
 
-## Quick Start
-
-### Basic Text Generation
-
-```rust
-use dendrite_core::model::{ModelConfig, Tokenizer, Transformer};
-use dendrite_core::attention::ReferenceBackend;
-use candle_core::Device;
-use std::sync::Arc;
-
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // Load model
-    let model_path = std::path::Path::new("/path/to/tinyllama");
-    let config = ModelConfig::from_file(&model_path.join("config.json"))?;
-    let tokenizer = Tokenizer::from_dir(model_path)?;
-
-    let backend = Arc::new(ReferenceBackend::new());
-    let mut transformer = Transformer::new(config, backend, Device::Cpu)?;
-    transformer.load_weights(model_path)?;
-
-    // Generate text
-    let text = transformer
-        .generate_text(&tokenizer, "Hello, my name is", 50, 0.0)
-        .await?;
-
-    println!("{}", text);
-    Ok(())
-}
-```
-
-### GPU Inference with KV Cache
-
-```rust
-use dendrite_core::model::{ModelConfig, Transformer, KvCache};
-use dendrite_core::attention::FlashAttnBackend;  // requires "cuda" feature
-use candle_core::{Device, Tensor};
-
-// Load model on GPU
-let device = Device::new_cuda(0)?;
-let backend = Arc::new(FlashAttnBackend::new(0)?);
-let mut transformer = Transformer::new(config, backend, device.clone())?;
-transformer.load_weights(model_path)?;
-
-// Create KV cache for efficient autoregressive generation
-let mut cache = transformer.create_cache();
-
-// Prefill prompt
-let prompt_tokens = vec![1u32, 15043, 29892];  // "<s>Hello,"
-let input = Tensor::from_slice(&prompt_tokens, (1, 3), &device)?;
-let logits = transformer.forward_with_cache(&input, &mut cache).await?;
-
-// Decode with cached KV (O(1) per token)
-let next_token = transformer.sample(&logits, 0.0)?;
-println!("Generated token: {}", next_token);
-```
-
-### O(1) Fork for Tree Search
-
-```rust
-use dendrite_core::cache::{PagedKvCache, DEFAULT_PAGE_SIZE};
-use candle_core::DType;
-
-// Create paged cache with O(1) fork support
-let cache = PagedKvCache::new(
-    32,                    // num_layers
-    1000,                  // initial pages
-    DEFAULT_PAGE_SIZE,     // 16 tokens/page
-    8,                     // num_kv_heads
-    128,                   // head_dim
-    DType::F16,
-    device,
-)?;
-
-// Allocate parent sequence
-let parent = cache.allocate_sequence();
-
-// O(1) fork - shares pages via copy-on-write
-let child1 = cache.fork_sequence(parent)?;
-let child2 = cache.fork_sequence(parent)?;
-
-// Each child can diverge independently
-// Pages are copied only when modified
-```
-
-## Crate Structure
-
-| Crate | Description |
-|-------|-------------|
-| `dendrite` | High-level API and engine |
-| `dendrite-core` | Core engine: KV cache, scheduler, tree management |
-| `dendrite-ffi` | FFI bindings for FlashInfer and CUDA |
-
-## Requirements
-
-- Rust 1.83+ (edition 2024)
-- CUDA 12.x (optional, for GPU acceleration)
-- FlashInfer 0.2.x (optional, for optimized kernels)
-
-## Building
+Linux, Python 3.12, a CUDA GPU, and a source checkout of kev at the commit Dendrite was tested against. Kev pins `torch<2.9`; the GB10 needs torch 2.9 with CUDA 13, so kev goes in without its dependencies.
 
 ```bash
-# CPU-only build
-cargo build --release
-
-# With CUDA support
-cargo build --release --features cuda
-
-# Full build with all features
-cargo build --release --features full
+pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cu130
+git clone https://github.com/jaredpalmer/kev && git -C kev checkout 2074cc4
+pip install --no-deps -e kev
+pip install accelerate datasets peft scikit-learn pydantic
+pip install -e .
 ```
 
-## Running Examples
+Tested with torch 2.9.0+cu130, transformers 5.20.1, flash-linear-attention 0.5.2 and triton 3.5.0. On a GB10, export `TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas`, because Triton's bundled ptxas rejects sm_121a.
+
+## Use
+
+Serve. The server has kev's API (`POST /v1/systemone`, TypeSafe System One compatible), plus `GET /v1/dendrite` for checkpoint stats:
 
 ```bash
-# GPU inference with TinyLlama (requires model weights)
-cargo run -p dendrite-core --features cuda --example gpu_inference -- /path/to/tinyllama
-
-# Text generation with tokenizer integration
-cargo run -p dendrite-core --example text_inference -- /path/to/tinyllama
-
-# Golden token validation (verify vs HuggingFace)
-python scripts/generate_golden.py --model /path/to/tinyllama --output golden_cases.json
-cargo run -p dendrite-core --example golden_validation -- /path/to/tinyllama golden_cases.json
-
-# MCTS search with simulated environment
-cargo run -p dendrite-core --example mcts_search
-
-# Beam search with mock language model
-cargo run -p dendrite-core --example beam_search
+python -m dendrite.serve --run jaredpalmer/kev-9b --port 8008
 ```
 
-## Benchmarks
+`DENDRITE_CHECKPOINTS` and `DENDRITE_CHECKPOINT_TOKENS` size the checkpoint store. Kev's own `KEV_*` variables work as before.
+
+As a library:
+
+```python
+import torch
+from kev.checkpoint import LoadOptions, load
+from kev.model import admit
+from dendrite import extend, fork
+
+tok, model = load("jaredpalmer/kev-9b", "cuda", LoadOptions(dtype=torch.bfloat16, fused=True))
+extend.install(model.lm)                       # calibrates the GEMM row counts once
+
+enc = admit(model, tok, record)                # a kev record: {"state": ..., "questions": [...]}
+ck = extend.checkpoint(model, enc)             # keep this between requests
+
+grown = admit(model, tok, grown_record)        # the same document with more text appended
+prefix, ck = extend.advance(model, ck, grown)  # (None, None) when it does not continue the checkpoint
+probs = fork.fork_probs(model, grown, prefix)  # every question, on one shared copy of the state
+```
+
+## Gates
+
+Each gate needs a CUDA GPU and downloads the model on first run. Run them under the memory guard on a unified-memory GPU, where an allocation overrun can take down the whole machine instead of raising:
 
 ```bash
-# Fork latency benchmark
-cargo bench --bench fork
-
-# Tree search benchmark
-cargo bench --bench tree_search
-
-# Memory usage benchmark
-cargo bench --bench memory
+export DENDRITE_GPU_CAP_GIB=40                 # torch allocator cap
+python -m dendrite.memguard --floor 8 -- python gates/fork_gate.py --run jaredpalmer/kev-9b --fused
+python -m dendrite.memguard --floor 8 -- python gates/fork_gate.py --run jaredpalmer/kev-9b --fused --tol 0.01 --selftest
+python -m dendrite.memguard --floor 8 -- python gates/extend_gate.py --run jaredpalmer/kev-9b
+python -m dendrite.memguard --floor 8 -- python gates/serve_gate.py --run jaredpalmer/kev-9b
+python gates/bench.py --run jaredpalmer/kev-9b --fused --arms kev,fork
 ```
 
-## Target Hardware
+`memguard` kills the command's process tree when free host memory falls below `--floor` GiB. `python -m dendrite.memguard --selftest` checks both directions without a GPU. The benchmark text is kev's own documentation, read from the kev checkout (`KEV_DOCS` overrides the path).
 
-Dendrite is optimized for:
-- **NVIDIA GB10/DGX Spark**: 128GB unified memory, NVLink-C2C
-- **Grace Hopper**: Unified memory architecture
-- Works on any CUDA-capable GPU with reduced memory
+## The Rust engine
 
-## Performance (Measured)
-
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Fork latency | < 50 μs | **~500ns** (100x better) |
-| Grammar mask | < 50 μs | **~1.6μs** (30x better) |
-| Decode latency | < 10 ms | **10ms** on GB10 |
-| Memory overhead | < 5% per fork | **~0.1%** (CoW) |
-
-See [docs/architecture.md](docs/architecture.md) for detailed design.
+Until October 2026 this repository held a Rust inference engine with a copy-on-write paged KV cache and tree search. It is kept as the [`rust-engine`](../../tree/rust-engine) branch and the `rust-engine-final` tag. Its README compared fork latency against vLLM and SGLang recomputing a shared prefix. That comparison was wrong, because both engines reuse prefix KV blocks, and it was withdrawn on 2026-10-24.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Acknowledgments
-
-- [FlashInfer](https://github.com/flashinfer-ai/flashinfer) for attention kernels
-- [vLLM](https://github.com/vllm-project/vllm) for PagedAttention inspiration
-- [llguidance](https://github.com/microsoft/llguidance) for grammar constraints
-- [Candle](https://github.com/huggingface/candle) for Rust ML framework
+MIT. Kev is Apache-2.0, by Jared Palmer.

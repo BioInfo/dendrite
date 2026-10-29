@@ -1,0 +1,5 @@
+{"gemm_ceiling_tflops": {"bf16 16384x4096x24576": 59.6, "bf16 16384x12288x4096": 55.3, "bf16 16384x4096x4096": 59.8, "fp8 16384x4096x24576": 147.2, "fp8 16384x12288x4096": 151.7, "fp8 16384x4096x4096": 150.4}}
+{"linear_params_b": 6.92, "layers": 32, "attn_layers": 8, "heads": 16, "head_dim": 256}
+{"state": 1024, "prefix_ms": 302.8, "tok_per_s": 3382, "linear_tflop": 14.2, "attn_tflop": 0.07, "achieved_tflops": 47.0, "peak_gib": 16.0}
+{"state": 16405, "prefix_ms": 4723.9, "tok_per_s": 3473, "linear_tflop": 227.0, "attn_tflop": 17.64, "achieved_tflops": 51.8, "peak_gib": 17.5}
+{"profile_state": 16405, "total_ms": 4650.4, "ms": {"deltanet_mixer": 1407.9, "mlp": 2487.2, "attention_mixer": 572.1, "other (norms, embed, residual, launch gaps)": 183.3}, "pct": {"deltanet_mixer": 30.3, "mlp": 53.5, "attention_mixer": 12.3, "other (norms, embed, residual, launch gaps)": 3.9}}

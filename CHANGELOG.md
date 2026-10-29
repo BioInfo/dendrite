@@ -5,7 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased] — v0.1.0
+## [0.2.0] - unreleased
+
+`main` is now a Python package for kev decision models. The Rust engine is archived on the `rust-engine` branch and the `rust-engine-final` tag.
+
+### Added
+
+- `dendrite.fork`: question branches on one shared copy of the state's attention cache (cascade attention), in place of kev's copy per question. Kev-9B on a GB10, 64 questions: 11.6x faster branches at 16k state tokens, 9.9x at 8k. Gate: argmax agreement and max |dp| within twice kev's bf16-versus-fp32 difference.
+- `dendrite.extend`: exact state reuse. `checkpoint()` and `advance()` continue a cached state with only the appended tokens, bit-identical to a full state pass (64-token alignment, query padding, calibrated GEMM row padding). 45x faster for a 5-token append to a 16k state, 3.6x for 4,421 tokens.
+- `dendrite.serve`: kev.serve with a checkpoint store, so a request whose state continues an earlier one skips the shared part. `GET /v1/dendrite` reports checkpoint stats.
+- `dendrite.memguard`: host-memory watchdog that kills a command's process tree below a free-memory floor, with `--selftest`. `dendrite.gpucap`: torch allocator cap from `DENDRITE_GPU_CAP_GIB`.
+- `gates/`: fork, extend and serve correctness gates, each with planted-fault controls, and the branch benchmark. `results/`: the Kev-9B measurements behind the README.
+
+### Removed
+
+- The Rust workspace (`crates/`, Cargo files, Rust CI) from `main`. CI now lints the package and runs the memguard selftest.
+
+## [0.1.0] - Rust engine (archived on `rust-engine`)
 
 ### Corrected (2026-10-24)
 
